@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>rag-lesson-agent | Self-Evaluating Content Generation System</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="/static/vendor/purify.min.js"></script>
+  <script src="/static/vendor/marked.min.js"></script>
+</head>
+<body>
+  <!-- Top Ticker / Marquee Strip -->
+  <div class="ticker-wrap" aria-hidden="true">
+    <div class="ticker-move">
+      <span class="ticker-item">GENAI CONTENT SYSTEMS <span>•</span> 自律学習生成</span>
+      <span class="ticker-item">HARD PASS/FAIL RUBRIC <span>•</span> 厳格な評価</span>
+      <span class="ticker-item">ANTI-HALLUCINATION EVIDENCE CHECK <span>•</span> 事実根拠検証</span>
+      <span class="ticker-item">PERSISTENT MEMORY & REFLECTION <span>•</span> 自己進化ループ</span>
+      <span class="ticker-item">INDIAN LEARNER CENTRIC <span>•</span> 初心者向け解説</span>
+    </div>
+  </div>
+
+  <!-- Header -->
+  <header class="app-header">
+    <div class="header-inner container">
+      <div class="brand">
+        <div class="brand-badge">RAG</div>
+        <div class="brand-text">
+          <span class="brand-title">rag-lesson-agent <span class="kanji-accent">学習知能</span></span>
+          <span class="brand-subtitle">Autonomous Generate → Evaluate → Regenerate Pipeline</span>
+        </div>
+      </div>
+      <div class="header-controls">
+        <div class="status-indicator">
+          <span class="status-dot" id="systemStatusDot"></span>
+          <span class="status-label" id="systemStatusLabel">System Ready</span>
+        </div>
+        <button id="themeToggleBtn" class="btn btn-ghost" title="Toggle Dark/Light Theme" aria-label="Toggle theme">
+          <span id="themeIcon">☀️</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Workspace -->
+  <main class="container main-content">
+
+    <!-- Hero / Input Section -->
+    <section class="hero-bento">
+      <div class="hero-card">
+        <div class="card-eyebrow">
+          <span class="badge">SPECIFICATION 入力</span>
+          <span>Target: 12th-Grade Graduate • Zero AI Background</span>
+        </div>
+        <h1 class="hero-heading">Generate a beginner lesson that judges its own quality.</h1>
+        <p class="hero-desc">
+          The system plans curriculum, drafts lessons in simple English with Indian relatable analogies, evaluates against 16 hard pass/fail checkpoints, and regenerates until it clears the bar before a human ever sees it.
+        </p>
+
+        <form id="runForm" class="topic-input-group">
+          <input 
+            type="text" 
+            id="topicInput" 
+            name="topic" 
+            class="input-field" 
+            value="Introduction to RAG (Retrieval-Augmented Generation)" 
+            placeholder="Enter AI topic (e.g. Introduction to RAG)..."
+            maxlength="100"
+            required
+          />
+          <button type="submit" id="generateBtn" class="btn btn-primary">
+            <span class="btn-text">Generate Lesson</span>
+            <span class="kanji-btn">生成開始</span>
+          </button>
+        </form>
+
+        <div class="topic-chips">
+          <span class="chips-label">Quick topics:</span>
+          <button class="chip" data-topic="Introduction to RAG (Retrieval-Augmented Generation)">Introduction to RAG</button>
+          <button class="chip" data-topic="What are Vector Embeddings?">Vector Embeddings</button>
+          <button class="chip" data-topic="How Vector Databases Work">Vector Databases</button>
+          <button class="chip" data-topic="RAG vs Fine-Tuning">RAG vs Fine-Tuning</button>
+        </div>
+      </div>
+
+      <!-- Quick Stats Bento Card -->
+      <div class="stats-mini-card">
+        <div class="mini-stat">
+          <span class="stat-number" id="statPassRate">100%</span>
+          <span class="stat-name">Passing Standard (No partial scores)</span>
+        </div>
+        <div class="mini-stat">
+          <span class="stat-number" id="statMaxAttempts">3</span>
+          <span class="stat-name">Max Attempts (Bounded termination)</span>
+        </div>
+        <div class="mini-stat">
+          <span class="stat-number" id="statCheckCount">16</span>
+          <span class="stat-name">Rubric Checkpoints (Code + LLM)</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Live Pipeline Visualizer -->
+    <section class="section-container">
+      <div class="section-header">
+        <h2 class="section-title">
+          <span class="kanji-lead">推論</span> Live Agentic Pipeline
+        </h2>
+        <div class="attempt-badge" id="pipelineAttemptBadge">Attempt 1 / 3</div>
+      </div>
+
+      <div class="pipeline-track">
+        <div class="pipeline-node" id="nodePlanner">
+          <div class="node-icon">📋</div>
+          <div class="node-content">
+            <div class="node-header">
+              <span class="node-title">Planner</span>
+              <span class="node-kanji">計画</span>
+            </div>
+            <span class="node-status">Waiting</span>
+          </div>
+        </div>
+
+        <div class="pipeline-connector" id="conn1"></div>
+
+        <div class="pipeline-node" id="nodeGenerator">
+          <div class="node-icon">✍️</div>
+          <div class="node-content">
+            <div class="node-header">
+              <span class="node-title">Generator</span>
+              <span class="node-kanji">生成</span>
+            </div>
+            <span class="node-status">Waiting</span>
+          </div>
+        </div>
+
+        <div class="pipeline-connector" id="conn2"></div>
+
+        <div class="pipeline-node" id="nodeEvaluator">
+          <div class="node-icon">⚖️</div>
+          <div class="node-content">
+            <div class="node-header">
+              <span class="node-title">Evaluator</span>
+              <span class="node-kanji">評価</span>
+            </div>
+            <span class="node-status">Waiting</span>
+          </div>
+        </div>
+
+        <div class="pipeline-connector" id="conn3"></div>
+
+        <div class="pipeline-node" id="nodeDecision">
+          <div class="node-icon">🚀</div>
+          <div class="node-content">
+            <div class="node-header">
+              <span class="node-title">Router Decision</span>
+              <span class="node-kanji">決定</span>
+            </div>
+            <span class="node-status">Waiting</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Retry loop indicator -->
+      <div class="retry-loop-callout" id="retryLoopCallout" style="display: none;">
+        <span class="retry-arrow">↺</span>
+        <span class="retry-text" id="retryLoopText">Rejection caught. Regenerating with targeted feedback...</span>
+      </div>
+    </section>
+
+    <!-- Evaluator Rubric Board -->
+    <section class="section-container">
+      <div class="section-header">
+        <h2 class="section-title">
+          <span class="kanji-lead">基準</span> Evaluator Checkpoints Board
+        </h2>
+        <div class="board-filters">
+          <span class="filter-tag active" data-filter="all">All (16)</span>
+          <span class="filter-tag" data-filter="code">Deterministic Code (5)</span>
+          <span class="filter-tag" data-filter="llm">LLM Judge (11)</span>
+        </div>
+      </div>
+
+      <div class="rubric-grid" id="rubricGrid">
+        <!-- Rendered dynamically -->
+      </div>
+    </section>
+
+    <!-- Side-by-Side: Attempts History & Deliberate Error Lab -->
+    <section class="two-col-grid">
+      
+      <!-- Column 1: Attempts Timeline & Revision Log -->
+      <div class="card panel-card">
+        <div class="card-header">
+          <h3 class="panel-title"><span class="kanji-lead">履歴</span> Attempts Timeline & Changes</h3>
+          <span class="badge" id="attemptsCountBadge">0 Attempts</span>
+        </div>
+        <div class="attempts-tabs" id="attemptsTabs">
+          <!-- Dynamically populated -->
+        </div>
+        <div class="attempt-detail-body" id="attemptDetailBody">
+          <p class="placeholder-text">Run a generation pipeline or test deliberate errors to see attempt diagnostics here.</p>
+        </div>
+      </div>
+
+      <!-- Column 2: Deliberate-Error Lab (Video Demo Centerpiece) -->
+      <div class="card panel-card highlight-panel">
+        <div class="card-header">
+          <h3 class="panel-title"><span class="kanji-lead">実験</span> Deliberate-Error Lab</h3>
+          <span class="badge badge-accent">Demo Centerpiece</span>
+        </div>
+        <p class="panel-desc">
+          Test how the dual-layer evaluator rejects flawed lessons with exact quotes before any human sees them.
+        </p>
+
+        <div class="lab-buttons">
+          <button class="btn btn-outline" id="loadFactualErrorBtn">1. Factual Error (Retrains weights)</button>
+          <button class="btn btn-outline" id="loadJargonDumpBtn">2. Jargon Dump (Cosine similarity)</button>
+          <button class="btn btn-outline" id="loadBadFlowBtn">3. Bad Flow (Example first)</button>
+        </div>
+
+        <div class="lab-input-wrap">
+          <textarea id="labTextarea" class="code-textarea" rows="8" placeholder="Paste or select a candidate lesson markdown to evaluate live..."></textarea>
+        </div>
+
+        <div class="lab-actions">
+          <button id="runLabEvaluateBtn" class="btn btn-primary">
+            <span>Run Evaluator Live</span>
+            <span class="kanji-btn">即時検証</span>
+          </button>
+          <button id="injectPipelineBtn" class="btn btn-ghost" title="Run full self-correction loop starting with this error">
+            <span>Inject Into Full Loop</span>
+          </button>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- Final Shipped Lesson Reader -->
+    <section class="section-container" id="lessonReaderSection">
+      <div class="section-header">
+        <h2 class="section-title">
+          <span class="kanji-lead">合格</span> Shipped Beginner Lesson
+        </h2>
+        <div class="reader-actions">
+          <button id="copyMarkdownBtn" class="btn btn-ghost">Copy Markdown</button>
+          <button id="downloadMarkdownBtn" class="btn btn-outline">Download .md</button>
+        </div>
+      </div>
+
+      <div class="card reader-card">
+        <div class="reading-progress-bar" id="readingProgressBar"></div>
+        <div class="lesson-markdown-body" id="lessonMarkdownBody">
+          <div class="empty-lesson-state">
+            <span class="empty-icon">📖</span>
+            <h3>No lesson shipped yet</h3>
+            <p>Enter a topic above and click "Generate Lesson", or run the Deliberate Error Lab.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Memory, Learning & Rejection Logs Tabs -->
+    <section class="section-container">
+      <div class="section-header">
+        <h2 class="section-title">
+          <span class="kanji-lead">記憶</span> Persistent Memory & Rejection Logs
+        </h2>
+        <div class="tab-controls">
+          <button class="sub-tab active" data-tab="memoryTab">System Learning</button>
+          <button class="sub-tab" data-tab="rejectionTab">Rejection Log (JSONL)</button>
+          <button class="sub-tab" data-tab="guardrailTab">Reflector Guardrails</button>
+        </div>
+      </div>
+
+      <!-- Tab 1: Memory & Learning -->
+      <div class="tab-pane active" id="memoryTab">
+        <div class="card panel-card">
+          <h4>Cumulative Check Failure Distribution Across All Runs</h4>
+          <p class="panel-desc">Visualizes which rubric checks fail most often. If a check reaches the failure threshold, the Reflector synthesizes a targeted rule for the generator prompt.</p>
+          <div class="chart-container" id="failureChartContainer">
+            <!-- Plain SVG Bar Chart injected here -->
+          </div>
+
+          <h4 style="margin-top: 2rem;">Active Learned Generator Rules Injected Into Prompts</h4>
+          <div class="rules-list" id="activeRulesList">
+            <!-- Rendered dynamically -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 2: Rejection Log Table -->
+      <div class="tab-pane" id="rejectionTab">
+        <div class="card panel-card">
+          <div class="table-responsive">
+            <table class="data-table" id="rejectionLogTable">
+              <thead>
+                <tr>
+                  <th>Timestamp</th>
+                  <th>Run ID</th>
+                  <th>Attempt</th>
+                  <th>Failed Checks</th>
+                  <th>What Changed on Retry</th>
+                  <th>Final Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <!-- Populated dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 3: Guardrails & Security -->
+      <div class="tab-pane" id="guardrailTab">
+        <div class="card panel-card">
+          <h4>Evaluator Self-Modification Defense (Architectural Guardrail)</h4>
+          <p class="panel-desc">
+            To prevent the agent from cheating or lowering quality standards, <strong>the system is architecturally prohibited from modifying rubric.yaml or judge prompts autonomously.</strong>
+            Any suggested rubric changes proposed by the Reflector are quarantined below for human review.
+          </p>
+          <div class="quarantine-box" id="quarantineList">
+            <!-- Rendered dynamically -->
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- Checkpoint Detail Side Drawer -->
+  <aside class="drawer" id="checkDrawer" aria-hidden="true">
+    <div class="drawer-header">
+      <div class="drawer-title-group">
+        <span class="badge" id="drawerCheckBadge">A1</span>
+        <h3 id="drawerCheckName">Check Name</h3>
+      </div>
+      <button class="drawer-close" id="drawerCloseBtn" aria-label="Close details">✕</button>
+    </div>
+    <div class="drawer-body">
+      <div class="drawer-item">
+        <span class="drawer-label">Type & Dimension</span>
+        <div id="drawerCheckMeta">LLM Judge • Accuracy & Grounding</div>
+      </div>
+      <div class="drawer-item">
+        <span class="drawer-label">Pass Criteria</span>
+        <p id="drawerCheckCriteria" class="drawer-text"></p>
+      </div>
+      <div class="drawer-item">
+        <span class="drawer-label">Execution Result</span>
+        <div id="drawerCheckStatus" class="status-pill pass">PASS</div>
+      </div>
+      <div class="drawer-item">
+        <span class="drawer-label">Judge Reason</span>
+        <p id="drawerCheckReason" class="drawer-text"></p>
+      </div>
+      <div class="drawer-item" id="drawerEvidenceGroup">
+        <span class="drawer-label">Evidence Quote from Text</span>
+        <blockquote id="drawerCheckEvidence" class="drawer-quote"></blockquote>
+      </div>
+      <div class="drawer-item" id="drawerFixGroup">
+        <span class="drawer-label">Suggested Fix for Retry</span>
+        <p id="drawerCheckFix" class="drawer-text"></p>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Notification Toasts -->
+  <div id="toastContainer" class="toast-container" aria-live="polite"></div>
+
+  <!-- App Script (ES Module) -->
+  <script type="module" src="/static/app.js"></script>
+</body>
+</html>

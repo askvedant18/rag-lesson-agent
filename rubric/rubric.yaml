@@ -1,0 +1,150 @@
+# Rubric as Data for Lesson Evaluation
+# Evaluates beginner learning content generated for 12th-grade learners.
+# Each checkpoint is hard PASS/FAIL. No partial credit.
+
+dimensions:
+  A: "Accuracy & Grounding"
+  B: "Beginner-Friendly Language"
+  C: "Teaches by Example"
+  D: "Concept Coverage"
+  E: "Flow & Coherence"
+
+checks:
+  # Dimension A: Accuracy & Grounding
+  - id: "A1"
+    dimension: "A"
+    name: "Correct RAG Definition"
+    type: "llm"
+    pass_criteria: "The lesson accurately defines RAG as retrieving external factual documents and feeding them into the prompt so an LLM generates a grounded answer."
+    fail_examples:
+      - "RAG is a way to teach a model by updating its brain weights every time."
+      - "RAG means asking ChatGPT questions repeatedly until it gets it right."
+
+  - id: "A2"
+    dimension: "A"
+    name: "Grounding Integrity (No Fact Contradictions)"
+    type: "llm"
+    pass_criteria: "The lesson contains zero claims that contradict the grounding fact sheet, specifically confirming that RAG never retrains or alters LLM weights."
+    fail_examples:
+      - "During query time, RAG retrains the model's weights."
+      - "RAG modifies the neural network parameters directly."
+
+  - id: "A3"
+    dimension: "A"
+    name: "Limitations Mentioned"
+    type: "llm"
+    pass_criteria: "The lesson explicitly explains real-world limits or failure modes of RAG (e.g. wrong retrieval, garbage in garbage out, latency, or costs)."
+    fail_examples:
+      - "RAG is 100% perfect and never makes mistakes or costs anything extra."
+
+  # Dimension B: Beginner-Friendly Language
+  - id: "B1"
+    dimension: "B"
+    name: "Average Sentence Length <= 15 Words"
+    type: "code"
+    pass_criteria: "The average word count across all sentences in the lesson body is 15 words or fewer."
+    fail_examples:
+      - "A text where average sentence length is 18.5 words."
+
+  - id: "B2"
+    dimension: "B"
+    name: "Max Sentence Length <= 25 Words"
+    type: "code"
+    pass_criteria: "No single sentence in the lesson body exceeds 25 words."
+    fail_examples:
+      - "Whenever an artificial intelligence system encounters a question it might not know the exact answer to, it searches through millions of stored text documents to retrieve the most suitable pieces of text."
+
+  - id: "B3a"
+    dimension: "B"
+    name: "Jargon Defined at First Use (Code Heuristic)"
+    type: "code"
+    pass_criteria: "Every technical term in the jargon list appears with a definition indicator (is, means, called, refers to, stands for, parentheses, or dash) at or immediately following its first appearance."
+    fail_examples:
+      - "We convert the data into embeddings and then calculate cosine similarity."
+
+  - id: "B3b"
+    dimension: "B"
+    name: "Simple Jargon Explanations"
+    type: "llm"
+    pass_criteria: "All technical terms are explained in genuine everyday words without circular jargon or high-level academic theory."
+    fail_examples:
+      - "An embedding is a high-dimensional mathematical manifold in Euclidean latent space."
+
+  - id: "B4"
+    dimension: "B"
+    name: "No Idioms, Slang, or Complex Vocabulary"
+    type: "llm"
+    pass_criteria: "The lesson avoids complex Western idioms, confusing slang, and unnecessarily academic vocabulary."
+    fail_examples:
+      - "Hit the nail on the head"
+      - "Bite the bullet"
+      - "paradigm shift"
+      - "obviate"
+      - "synergistic"
+
+  # Dimension C: Teaches by Example
+  - id: "C1"
+    dimension: "C"
+    name: "Consistent Everyday Analogy"
+    type: "llm"
+    pass_criteria: "The lesson uses one clear, consistent everyday analogy (such as an open-book exam or a college library) to explain how RAG works."
+    fail_examples:
+      - "Lesson starts with a rocket engine, switches to a cooking recipe, and then talks about banking."
+
+  - id: "C2"
+    dimension: "C"
+    name: "Worked Step-by-Step Example"
+    type: "llm"
+    pass_criteria: "The lesson includes a concrete worked example showing a specific user Question, the Retrieved Text passage, and the Final LLM Answer."
+    fail_examples:
+      - "A theoretical explanation with no concrete sample question, text snippet, and answer."
+
+  # Dimension D: Concept Coverage
+  - id: "D1"
+    dimension: "D"
+    name: "Required Headings (What, Why, How)"
+    type: "code"
+    pass_criteria: "The markdown document contains clear section headings covering What, Why, and How."
+    fail_examples:
+      - "Lesson has only one heading '# Introduction' and skips 'Why' or 'How'."
+
+  - id: "D2"
+    dimension: "D"
+    name: "Four Core Pipeline Steps Explained"
+    type: "llm"
+    pass_criteria: "The lesson clearly explains the four essential steps of the RAG pipeline: chunking, embedding, retrieving, and generating."
+    fail_examples:
+      - "Lesson only mentions searching Google and passing text to ChatGPT, omitting chunking and embedding."
+
+  - id: "D3"
+    dimension: "D"
+    name: "Why-It-Matters Core Benefits"
+    type: "llm"
+    pass_criteria: "The lesson covers why RAG matters by discussing hallucinations, outdated information (knowledge cutoff), and connecting private/internal data."
+    fail_examples:
+      - "Only mentions that RAG makes answers longer without addressing hallucinations or outdated data."
+
+  # Dimension E: Flow & Coherence
+  - id: "E1"
+    dimension: "E"
+    name: "Logical Teaching Flow"
+    type: "llm"
+    pass_criteria: "Concepts are introduced in a logical order (What -> Why -> How -> Example -> Limits -> Recap) without using advanced terms before defining them."
+    fail_examples:
+      - "Shows complex vector database indexing before explaining what RAG is."
+
+  - id: "E2a"
+    dimension: "E"
+    name: "Recap Section and Exactly 3 Quiz Questions"
+    type: "code"
+    pass_criteria: "The lesson contains a Recap or Summary heading and exactly 3 numbered quick-check quiz questions."
+    fail_examples:
+      - "Recap is missing, or there are 2 questions, or 5 questions."
+
+  - id: "E2b"
+    dimension: "E"
+    name: "Quiz Questions Answerable from Lesson"
+    type: "llm"
+    pass_criteria: "All 3 quiz questions test key concepts from the lesson and can be answered directly using the material taught."
+    fail_examples:
+      - "Question asks about advanced transformer self-attention math not taught in the lesson."
