@@ -274,3 +274,4 @@ tests/test_security.py::test_secrets_redaction PASSED
 - **Multi-Lingual Glossaries**: Support Tamil, Telugu, Marathi, and Bengali regional glossaries alongside Hinglish.
 - **Automated Human-in-the-Loop Approval UI**: Add an interactive dashboard for curriculum editors to approve quarantined rubric modifications with a single click.
 - **Multimodal Visual Analogies**: Integrate automated diagram generation (e.g. SVG / Mermaid diagrams) illustrating the indexing vs query phases.
+

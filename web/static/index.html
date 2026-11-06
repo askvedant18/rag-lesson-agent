@@ -9,16 +9,6 @@
   <script src="/static/vendor/marked.min.js"></script>
 </head>
 <body>
-  <!-- Top Ticker / Marquee Strip -->
-  <div class="ticker-wrap" aria-hidden="true">
-    <div class="ticker-move">
-      <span class="ticker-item">GENAI CONTENT SYSTEMS <span>•</span> 自律学習生成</span>
-      <span class="ticker-item">HARD PASS/FAIL RUBRIC <span>•</span> 厳格な評価</span>
-      <span class="ticker-item">ANTI-HALLUCINATION EVIDENCE CHECK <span>•</span> 事実根拠検証</span>
-      <span class="ticker-item">PERSISTENT MEMORY & REFLECTION <span>•</span> 自己進化ループ</span>
-      <span class="ticker-item">INDIAN LEARNER CENTRIC <span>•</span> 初心者向け解説</span>
-    </div>
-  </div>
 
   <!-- Header -->
   <header class="app-header">
@@ -26,7 +16,7 @@
       <div class="brand">
         <div class="brand-badge">RAG</div>
         <div class="brand-text">
-          <span class="brand-title">rag-lesson-agent <span class="kanji-accent">学習知能</span></span>
+          <span class="brand-title">rag-lesson-agent</span>
           <span class="brand-subtitle">Autonomous Generate → Evaluate → Regenerate Pipeline</span>
         </div>
       </div>
@@ -34,6 +24,9 @@
         <div class="status-indicator">
           <span class="status-dot" id="systemStatusDot"></span>
           <span class="status-label" id="systemStatusLabel">System Ready</span>
+        </div>
+        <div class="mode-indicator" id="llmModeBadge">
+          <span class="badge" id="llmModeText">Checking Mode...</span>
         </div>
         <button id="themeToggleBtn" class="btn btn-ghost" title="Toggle Dark/Light Theme" aria-label="Toggle theme">
           <span id="themeIcon">☀️</span>
@@ -45,11 +38,19 @@
   <!-- Main Workspace -->
   <main class="container main-content">
 
+    <!-- Mock Mode Alert Banner (hidden if real API key is active) -->
+    <div id="mockModeBanner" class="mock-alert-banner" style="display: none;">
+      <span class="alert-icon">⚠️</span>
+      <div class="alert-content">
+        <strong>OFFLINE SIMULATION MODE:</strong> No <code>GEMINI_API_KEY</code> detected in <code>.env</code>. Outputs and checks are running in local fallback simulation mode. Add your free key to <code>.env</code> from <a href="https://aistudio.google.com/" target="_blank" rel="noopener">Google AI Studio</a> to run real live Gemini calls.
+      </div>
+    </div>
+
     <!-- Hero / Input Section -->
     <section class="hero-bento">
       <div class="hero-card">
         <div class="card-eyebrow">
-          <span class="badge">SPECIFICATION 入力</span>
+          <span class="badge">SPECIFICATION INPUT</span>
           <span>Target: 12th-Grade Graduate • Zero AI Background</span>
         </div>
         <h1 class="hero-heading">Generate a beginner lesson that judges its own quality.</h1>
@@ -70,7 +71,6 @@
           />
           <button type="submit" id="generateBtn" class="btn btn-primary">
             <span class="btn-text">Generate Lesson</span>
-            <span class="kanji-btn">生成開始</span>
           </button>
         </form>
 
@@ -103,9 +103,7 @@
     <!-- Live Pipeline Visualizer -->
     <section class="section-container">
       <div class="section-header">
-        <h2 class="section-title">
-          <span class="kanji-lead">推論</span> Live Agentic Pipeline
-        </h2>
+        <h2 class="section-title">Live Agentic Pipeline</h2>
         <div class="attempt-badge" id="pipelineAttemptBadge">Attempt 1 / 3</div>
       </div>
 
@@ -115,7 +113,6 @@
           <div class="node-content">
             <div class="node-header">
               <span class="node-title">Planner</span>
-              <span class="node-kanji">計画</span>
             </div>
             <span class="node-status">Waiting</span>
           </div>
@@ -128,7 +125,6 @@
           <div class="node-content">
             <div class="node-header">
               <span class="node-title">Generator</span>
-              <span class="node-kanji">生成</span>
             </div>
             <span class="node-status">Waiting</span>
           </div>
@@ -141,7 +137,6 @@
           <div class="node-content">
             <div class="node-header">
               <span class="node-title">Evaluator</span>
-              <span class="node-kanji">評価</span>
             </div>
             <span class="node-status">Waiting</span>
           </div>
@@ -154,7 +149,6 @@
           <div class="node-content">
             <div class="node-header">
               <span class="node-title">Router Decision</span>
-              <span class="node-kanji">決定</span>
             </div>
             <span class="node-status">Waiting</span>
           </div>
@@ -171,9 +165,7 @@
     <!-- Evaluator Rubric Board -->
     <section class="section-container">
       <div class="section-header">
-        <h2 class="section-title">
-          <span class="kanji-lead">基準</span> Evaluator Checkpoints Board
-        </h2>
+        <h2 class="section-title">Evaluator Checkpoints Board</h2>
         <div class="board-filters">
           <span class="filter-tag active" data-filter="all">All (16)</span>
           <span class="filter-tag" data-filter="code">Deterministic Code (5)</span>
@@ -192,7 +184,7 @@
       <!-- Column 1: Attempts Timeline & Revision Log -->
       <div class="card panel-card">
         <div class="card-header">
-          <h3 class="panel-title"><span class="kanji-lead">履歴</span> Attempts Timeline & Changes</h3>
+          <h3 class="panel-title">Attempts Timeline & Changes</h3>
           <span class="badge" id="attemptsCountBadge">0 Attempts</span>
         </div>
         <div class="attempts-tabs" id="attemptsTabs">
@@ -206,7 +198,7 @@
       <!-- Column 2: Deliberate-Error Lab (Video Demo Centerpiece) -->
       <div class="card panel-card highlight-panel">
         <div class="card-header">
-          <h3 class="panel-title"><span class="kanji-lead">実験</span> Deliberate-Error Lab</h3>
+          <h3 class="panel-title">Deliberate-Error Lab</h3>
           <span class="badge badge-accent">Demo Centerpiece</span>
         </div>
         <p class="panel-desc">
@@ -226,7 +218,6 @@
         <div class="lab-actions">
           <button id="runLabEvaluateBtn" class="btn btn-primary">
             <span>Run Evaluator Live</span>
-            <span class="kanji-btn">即時検証</span>
           </button>
           <button id="injectPipelineBtn" class="btn btn-ghost" title="Run full self-correction loop starting with this error">
             <span>Inject Into Full Loop</span>
@@ -239,9 +230,7 @@
     <!-- Final Shipped Lesson Reader -->
     <section class="section-container" id="lessonReaderSection">
       <div class="section-header">
-        <h2 class="section-title">
-          <span class="kanji-lead">合格</span> Shipped Beginner Lesson
-        </h2>
+        <h2 class="section-title">Shipped Beginner Lesson</h2>
         <div class="reader-actions">
           <button id="copyMarkdownBtn" class="btn btn-ghost">Copy Markdown</button>
           <button id="downloadMarkdownBtn" class="btn btn-outline">Download .md</button>
@@ -263,9 +252,7 @@
     <!-- Memory, Learning & Rejection Logs Tabs -->
     <section class="section-container">
       <div class="section-header">
-        <h2 class="section-title">
-          <span class="kanji-lead">記憶</span> Persistent Memory & Rejection Logs
-        </h2>
+        <h2 class="section-title">Persistent Memory & Rejection Logs</h2>
         <div class="tab-controls">
           <button class="sub-tab active" data-tab="memoryTab">System Learning</button>
           <button class="sub-tab" data-tab="rejectionTab">Rejection Log (JSONL)</button>

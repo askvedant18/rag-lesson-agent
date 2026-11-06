@@ -45,3 +45,4 @@ We saw the worked example first and finished with the definition.
 1. What was the sample question about?
 2. What does RAG stand for?
 3. Which step converts chunks into vectors?
+

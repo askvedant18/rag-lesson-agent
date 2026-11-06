@@ -195,8 +195,27 @@ async function setupCSRF() {
       const data = await res.json();
       csrfToken = data.csrf_token;
     }
+
+    // Check system LLM mode (Live vs Mock)
+    const confRes = await fetch("/api/config");
+    if (confRes.ok) {
+      const conf = await confRes.json();
+      const badge = document.getElementById("llmModeText");
+      const banner = document.getElementById("mockModeBanner");
+      if (conf.is_mock) {
+        badge.textContent = "OFFLINE MOCK MODE";
+        badge.style.color = "var(--accent-amber)";
+        badge.style.borderColor = "var(--accent-amber)";
+        if (banner) banner.style.display = "flex";
+      } else {
+        badge.textContent = `LIVE GEMINI (${conf.generator_model})`;
+        badge.style.color = "var(--accent-primary)";
+        badge.style.borderColor = "var(--accent-primary)";
+        if (banner) banner.style.display = "none";
+      }
+    }
   } catch (err) {
-    console.warn("Failed to obtain CSRF token:", err);
+    console.warn("Failed to obtain CSRF token or config:", err);
   }
 }
 
@@ -946,3 +965,4 @@ function escapeHTML(str) {
     '"': '&quot;'
   }[tag] || tag));
 }
+

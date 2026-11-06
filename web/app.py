@@ -51,6 +51,20 @@ async def serve_index():
     return FileResponse(index_file, media_type="text/html")
 
 
+@app.get("/api/config")
+async def get_system_config():
+    """Returns current active model configuration and whether mock mode is running."""
+    from llm import get_llm_client, DEFAULT_GENERATOR_MODEL, DEFAULT_JUDGE_MODEL
+    client = get_llm_client()
+    is_live = bool(client.client)
+    return {
+        "is_mock": not is_live,
+        "mode": "LIVE_GEMINI" if is_live else "OFFLINE_MOCK",
+        "generator_model": DEFAULT_GENERATOR_MODEL,
+        "judge_model": DEFAULT_JUDGE_MODEL
+    }
+
+
 @app.get("/api/csrf")
 async def get_csrf_token(response: Response):
     """
@@ -241,3 +255,4 @@ async def get_final_lesson():
 
 # Mount static assets directory
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+

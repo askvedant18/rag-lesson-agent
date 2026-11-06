@@ -70,6 +70,7 @@ def run_agent_pipeline(
     yield {
         "event": "PLAN_START",
         "run_id": run_id,
+        "is_mock": llm_client.is_mock,
         "message": f"Planning curriculum specification for: '{topic}'"
     }
 
@@ -193,6 +194,7 @@ def run_agent_pipeline(
             rejection_record = {
                 "run_id": run_id,
                 "timestamp": datetime.now(timezone.utc).isoformat(),
+                "is_mock": llm_client.is_mock,
                 "attempt": attempt,
                 "prompt_version": prompt_version,
                 "failed_check_ids": failed_ids,
@@ -263,6 +265,7 @@ def run_agent_pipeline(
     summary_data = {
         "run_id": run_id,
         "topic": topic,
+        "is_mock": llm_client.is_mock,
         "timestamp": started_at,
         "total_attempts": attempt,
         "final_status": final_status,
@@ -286,9 +289,19 @@ def run_agent_pipeline(
 
 
 def print_cli_banner():
+    llm = get_llm_client()
     print(f"\n{BOLD}{CYAN}===================================================================={RESET}")
     print(f"{BOLD}{CYAN}   rag-lesson-agent | Self-Evaluating Content Generation System      {RESET}")
-    print(f"{BOLD}{CYAN}===================================================================={RESET}\n")
+    print(f"{BOLD}{CYAN}===================================================================={RESET}")
+    if llm.is_mock:
+        print(f"{BOLD}{YELLOW}⚠️  [OFFLINE MOCK MODE ACTIVE]{RESET}")
+        print(f"   No GEMINI_API_KEY detected in .env. Outputs are generated offline.")
+        print(f"   Add your key to .env (from https://aistudio.google.com/) for live AI.")
+    else:
+        from llm import DEFAULT_GENERATOR_MODEL, DEFAULT_JUDGE_MODEL
+        print(f"{BOLD}{GREEN}✨ [LIVE GEMINI API CONNECTED]{RESET}")
+        print(f"   Generator Model: {DEFAULT_GENERATOR_MODEL} | Judge Model: {DEFAULT_JUDGE_MODEL}")
+    print(f"{CYAN}--------------------------------------------------------------------{RESET}\n")
 
 
 def print_check_table(checks: List[Dict[str, Any]]):
@@ -423,3 +436,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

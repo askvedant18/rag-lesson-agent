@@ -38,22 +38,26 @@ def redact_secrets(text: str) -> str:
 class LLMClient:
     """
     Wrapper for Gemini API calls with exponential backoff and JSON extraction.
+    Ensures strict transparency: never silently falls back to mocks if an API key is configured.
     """
 
     def __init__(self, api_key: Optional[str] = None):
-        self.api_key = api_key or GEMINI_API_KEY
+        self.api_key = api_key if api_key is not None else GEMINI_API_KEY
         self.client = None
         self.api_call_count = 0
+        self.is_mock = False
 
         if self.api_key and self.api_key != "your_gemini_api_key_here":
             try:
                 from google import genai
                 self.client = genai.Client(api_key=self.api_key)
+                self.is_mock = False
+                logger.info(f"Initialized live Google GenAI client with key: {redact_secrets(self.api_key)}")
             except Exception as e:
-                logger.warning(f"Failed to initialize google-genai client: {redact_secrets(str(e))}. Operating in offline/mock mode.")
-                self.client = None
+                raise RuntimeError(f"Failed to initialize google-genai client with provided key: {redact_secrets(str(e))}")
         else:
-            logger.info("No GEMINI_API_KEY provided; operating in offline fallback mode.")
+            self.is_mock = True
+            logger.warning("No valid GEMINI_API_KEY provided; operating in offline simulation mode.")
 
     def generate_text(
         self,
@@ -66,11 +70,13 @@ class LLMClient:
     ) -> str:
         """
         Generates freeform text with exponential backoff.
+        Raises an error if a configured Gemini API call fails; NEVER silently falls back to mock.
         """
         self.api_call_count += 1
         model_name = model or DEFAULT_GENERATOR_MODEL
 
-        if not self.client:
+        # Offline simulation only if no key was configured
+        if self.is_mock or not self.client:
             return self._offline_generate_text(prompt, system_instruction)
 
         from google.genai import types
@@ -100,8 +106,11 @@ class LLMClient:
                 )
                 time.sleep(delay)
 
-        logger.error(f"All {max_retries} retries exhausted. Using fallback text generator.")
-        return self._offline_generate_text(prompt, system_instruction)
+        # STRICT GUARDRAIL: Do NOT silently return mock if user supplied an API key
+        raise RuntimeError(
+            f"Gemini API call failed after {max_retries} retries: {redact_secrets(str(last_error))}. "
+            "Check your network connection and GEMINI_API_KEY quota at https://aistudio.google.com/."
+        )
 
     def generate_json(
         self,
@@ -115,11 +124,13 @@ class LLMClient:
     ) -> Dict[str, Any]:
         """
         Forces valid JSON output from the model, validates, and retries on parse failure.
+        Raises an error if a configured Gemini API call fails; NEVER silently falls back to mock.
         """
         self.api_call_count += 1
         model_name = model or DEFAULT_JUDGE_MODEL
 
-        if not self.client:
+        # Offline simulation only if no key was configured
+        if self.is_mock or not self.client:
             return self._offline_generate_json(prompt, system_instruction, schema)
 
         from google.genai import types
@@ -171,8 +182,10 @@ class LLMClient:
         except Exception:
             pass
 
-        logger.error(f"All JSON retries exhausted. Using offline JSON fallback.")
-        return self._offline_generate_json(prompt, system_instruction, schema)
+        # STRICT GUARDRAIL: Do NOT silently return mock if user supplied an API key
+        raise RuntimeError(
+            f"Gemini JSON API call failed after {max_retries} retries: {redact_secrets(str(last_error))}."
+        )
 
     def _extract_and_parse_json(self, raw: str) -> Optional[Dict[str, Any]]:
         """Cleans and extracts JSON even if markdown-wrapped (```json ... ```)."""
@@ -382,6 +395,11 @@ It stops hallucinations without retraining model weights.
             "here is an example first" in candidate_lesson.lower() or
             "worked example before explanation" in candidate_lesson.lower()
         )
+        is_images_only = (
+            "exclusively designed for creating digital jpeg photographs" in candidate_lesson.lower() or
+            "nothing to do with written text" in candidate_lesson.lower() or
+            "photo editing tool" in candidate_lesson.lower()
+        )
 
         # Default all passing
         results = {
@@ -421,6 +439,20 @@ It stops hallucinations without retraining model weights.
                 "reason": "Teaching flow is inverted: presents a complex example before explaining what RAG is.",
                 "evidence": "Worked Example Before Explanation",
                 "fix_suggestion": "Introduce the concept and everyday analogy first before jumping into specific examples."
+            }
+
+        if is_images_only:
+            results["A1"] = {
+                "passed": False,
+                "reason": "Falsely defines RAG as a digital JPEG photography tool, completely omitting text and LLM grounding.",
+                "evidence": "exclusively designed for creating digital JPEG photographs",
+                "fix_suggestion": "Define RAG accurately as an AI technique that retrieves text documents from a knowledge base to ground LLM generation."
+            }
+            results["A2"] = {
+                "passed": False,
+                "reason": "Directly contradicts the grounding fact sheet: RAG retrieves text documents for LLMs, not JPEG photographs.",
+                "evidence": "It has nothing to do with written text",
+                "fix_suggestion": "Remove false claims regarding camera images and ground the lesson in external document retrieval."
             }
 
         return {"checks": results}

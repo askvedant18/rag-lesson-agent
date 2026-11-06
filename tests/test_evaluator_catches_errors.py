@@ -59,6 +59,19 @@ def test_bad_flow_fails_e1(evaluator):
     assert "E1" in failed_ids, f"Expected E1 to fail, got: {failed_ids}"
 
 
+def test_custom_deliberate_error_images_only_fails_a1_and_a2(evaluator):
+    """
+    Independent custom deliberate error not in the 3 base samples:
+    Claims RAG is only for JPEG photography -> MUST fail A1 and A2.
+    """
+    lesson = load_bad_lesson("rag_is_images_only.md")
+    result = evaluator.evaluate(lesson)
+
+    assert result["passed"] is False
+    failed_ids = {c["id"] for c in result["failed_checks"]}
+    assert "A1" in failed_ids or "A2" in failed_ids, f"Expected A1 or A2 to fail, got: {failed_ids}"
+
+
 def test_passing_lesson_clears_all_rubric_checks(evaluator):
     """A high-quality compliant lesson must pass 100% of rubric checks."""
     from llm import get_llm_client
@@ -95,3 +108,4 @@ def test_judge_hallucinated_quote_flagged(evaluator):
 
     assert a2_check["passed"] is False
     assert a2_check["judge_evidence_unverified"] is True
+

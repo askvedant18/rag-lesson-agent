@@ -178,3 +178,4 @@ NEW LESSON:
 """
         explanation = self.llm.generate_text(prompt=prompt, temperature=0.2)
         return explanation.strip()
+

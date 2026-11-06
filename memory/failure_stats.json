@@ -1,11 +1,12 @@
 {
-  "total_runs": 3,
-  "successful_runs": 2,
+  "total_runs": 4,
+  "successful_runs": 3,
   "human_review_runs": 1,
   "attempts_history": [
     3,
     1,
-    2
+    2,
+    1
   ],
   "check_failures": {
     "E2a": 3,

@@ -118,3 +118,4 @@ def test_run_all_code_checks_returns_all_five():
     ids = {r["id"] for r in results}
     assert ids == {"B1", "B2", "B3a", "D1", "E2a"}
     assert all(r["passed"] for r in results)
+

@@ -165,3 +165,4 @@ Return valid JSON with:
         logger.warning(
             f"GUARDRAIL: Proposed rubric change for {check_id} quarantined in memory for human review: {proposal}"
         )
+
