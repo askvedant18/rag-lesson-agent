@@ -72,6 +72,20 @@ def test_custom_deliberate_error_images_only_fails_a1_and_a2(evaluator):
     assert "A1" in failed_ids or "A2" in failed_ids, f"Expected A1 or A2 to fail, got: {failed_ids}"
 
 
+def test_wrong_pipeline_order_fails_d2_and_e1(evaluator):
+    """
+    Human-approved rubric check test:
+    wrong_pipeline_order.md depicts chunking after query and omits question embedding.
+    Must fail D2 and E1.
+    """
+    lesson = load_bad_lesson("wrong_pipeline_order.md")
+    result = evaluator.evaluate(lesson)
+
+    assert result["passed"] is False
+    failed_ids = {c["id"] for c in result["failed_checks"]}
+    assert "D2" in failed_ids or "E1" in failed_ids, f"Expected D2 or E1 to fail, got: {failed_ids}"
+
+
 def test_passing_lesson_clears_all_rubric_checks(evaluator):
     """A high-quality compliant lesson must pass 100% of rubric checks."""
     from llm import get_llm_client

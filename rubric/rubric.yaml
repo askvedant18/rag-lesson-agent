@@ -74,7 +74,7 @@ checks:
     dimension: "B"
     name: "No Idioms, Slang, or Complex Vocabulary"
     type: "llm"
-    pass_criteria: "The lesson avoids complex Western idioms, confusing slang, and unnecessarily academic vocabulary."
+    pass_criteria: "The lesson avoids complex Western idioms, confusing slang, and unnecessarily academic vocabulary. Note: The Hinglish Glossary section is explicitly excluded from this check as it provides intentional vernacular translations."
     fail_examples:
       - "Hit the nail on the head"
       - "Bite the bullet"
@@ -110,11 +110,12 @@ checks:
 
   - id: "D2"
     dimension: "D"
-    name: "Four Core Pipeline Steps Explained"
+    name: "Two-Phase Pipeline (Prep vs Query) & Embedding"
     type: "llm"
-    pass_criteria: "The lesson clearly explains the four essential steps of the RAG pipeline: chunking, embedding, retrieving, and generating."
+    pass_criteria: "The lesson clearly explains the two phases of RAG: (1) Preparation phase (chunking documents and embedding into vector database happens in advance), and (2) Question time (the user question is also embedded into numbers, closest chunks retrieved, and answer generated). It must NOT depict chunking and embedding of documents as happening after the user asks a question."
     fail_examples:
-      - "Lesson only mentions searching Google and passing text to ChatGPT, omitting chunking and embedding."
+      - "Shows the user question arriving before document chunking and embedding."
+      - "Fails to explain that the user question is also converted into numbers to match stored chunks."
 
   - id: "D3"
     dimension: "D"
@@ -127,11 +128,12 @@ checks:
   # Dimension E: Flow & Coherence
   - id: "E1"
     dimension: "E"
-    name: "Logical Teaching Flow"
+    name: "Logical Teaching Flow (Two-Phase Order)"
     type: "llm"
-    pass_criteria: "Concepts are introduced in a logical order (What -> Why -> How -> Example -> Limits -> Recap) without using advanced terms before defining them."
+    pass_criteria: "Concepts are introduced in a logical pedagogical order (What -> Why -> How with Preparation vs Query phases -> Example -> Limits -> Recap), correctly separating document preparation from query answering."
     fail_examples:
       - "Shows complex vector database indexing before explaining what RAG is."
+      - "Presents pipeline flow where document chunking happens after the user prompt is typed."
 
   - id: "E2a"
     dimension: "E"

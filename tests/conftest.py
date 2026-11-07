@@ -14,3 +14,4 @@ def force_offline_mode_for_tests(monkeypatch):
     from llm import _default_client
     import llm
     llm._default_client = LLMClient(api_key="")
+

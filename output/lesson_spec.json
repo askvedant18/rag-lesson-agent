@@ -1,12 +1,12 @@
 {
   "topic": "Introduction to RAG (Retrieval-Augmented Generation)",
-  "learner_profile": "12th-grade graduate from India, limited English vocabulary, non-English-medium background, zero AI knowledge",
+  "learner_profile": "12th-grade graduate from India, non-English-medium background, zero prior AI knowledge, limited technical vocabulary.",
   "must_cover_concepts": [
     "What is RAG (Retrieval-Augmented Generation)",
-    "Why RAG matters (hallucination, outdated knowledge, private company data)",
-    "How RAG works (chunk, embed, retrieve, generate)",
-    "Difference between RAG and fine-tuning (weights never change)",
-    "Limitations of RAG (garbage in garbage out, retrieval failure, extra latency)"
+    "Why it matters (hallucination, outdated knowledge, private company data)",
+    "How it works (the 4 steps: chunking, embedding, retrieval, generation)",
+    "Crucial distinction: RAG never retrains or changes model weights",
+    "Limitations of RAG (garbage in garbage out, retrieval misses, latency and cost)"
   ],
   "jargon_list": [
     "llm",
@@ -20,20 +20,19 @@
     "prompt",
     "vector database"
   ],
-  "analogy": "Open-book examination with textbook lookup",
+  "analogy": "The Open-Book Exam: An LLM is like a student who has memorized many books, but RAG is like giving that student a textbook to look at during an exam so they don't have to guess.",
   "everyday_examples": [
-    "Checking college notice board before answering",
-    "Searching past WhatsApp chat history for exam dates",
-    "A student using library reference books during an open-book exam"
+    "A student using a specific college handbook to answer questions about admission rules instead of guessing based on general knowledge.",
+    "A bank employee using a private database of internal circulars to answer customer queries instead of relying on public internet information."
   ],
   "outline": [
-    "Hook & Analogy (Open-book exam)",
-    "1. What is RAG?",
-    "2. Why Does RAG Matter?",
-    "3. How Does RAG Work? (Chunk, Embed, Retrieve, Generate)",
-    "4. Worked Step-by-Step Example",
-    "5. Limitations of RAG",
-    "6. Hinglish Glossary",
-    "7. Recap and Quick Check (3 questions)"
+    "Section 1: Hook and Everyday Analogy",
+    "Section 2: What is RAG?",
+    "Section 3: Why Does RAG Matter?",
+    "Section 4: How Does RAG Work? (4 Steps)",
+    "Section 5: Worked Step-by-Step Example (Question -> Retrieved Passage -> Answer)",
+    "Section 6: Limitations of RAG",
+    "Section 7: Hinglish Glossary",
+    "Section 8: Recap and Quick Check (Exactly 3 questions)"
   ]
 }

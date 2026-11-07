@@ -31,6 +31,7 @@ ALLOWED_SAMPLE_LESSONS = {
     "factual_error": "tests/bad_lessons/factual_error.md",
     "jargon_dump": "tests/bad_lessons/jargon_dump.md",
     "bad_flow": "tests/bad_lessons/bad_flow.md",
+    "wrong_pipeline_order": "tests/bad_lessons/wrong_pipeline_order.md",
 }
 
 # UUID4 regex for run_id validation

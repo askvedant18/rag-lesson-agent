@@ -43,6 +43,41 @@ def append_rejection_log(entry: Dict[str, Any]):
         f.write(json.dumps(entry) + "\n")
 
 
+def finalize_rejection_logs(
+    run_id: str,
+    final_status: str,
+    total_attempts: int,
+    retry_changes: Dict[int, str]
+):
+    """
+    Updates all rejection log entries for run_id with the final run outcome
+    and the actual what_changed_on_retry explanations produced on retry.
+    """
+    if not os.path.exists(REJECTION_LOG_PATH):
+        return
+
+    updated_lines = []
+    with open(REJECTION_LOG_PATH, "r", encoding="utf-8") as f:
+        for line in f:
+            if not line.strip():
+                continue
+            try:
+                record = json.loads(line)
+                if record.get("run_id") == run_id:
+                    record["final_status"] = final_status
+                    record["total_attempts"] = total_attempts
+                    att = record.get("attempt", 1)
+                    if att in retry_changes:
+                        record["what_changed_on_retry"] = retry_changes[att]
+                updated_lines.append(json.dumps(record))
+            except Exception:
+                updated_lines.append(line.strip())
+
+    with open(REJECTION_LOG_PATH, "w", encoding="utf-8") as f:
+        for l in updated_lines:
+            f.write(l + "\n")
+
+
 def run_agent_pipeline(
     topic: str = "Introduction to RAG (Retrieval-Augmented Generation)",
     injected_lesson: Optional[str] = None,
@@ -92,6 +127,7 @@ def run_agent_pipeline(
     failed_checks: List[Dict[str, Any]] = []
     failed_history: Dict[int, List[str]] = {}
     what_changed_desc = ""
+    retry_changes: Dict[int, str] = {}
     final_status = "IN_PROGRESS"
     all_accumulated_failures: List[str] = []
 
@@ -136,6 +172,7 @@ def run_agent_pipeline(
                     new_lesson=current_lesson,
                     failed_checks=failed_checks
                 )
+                retry_changes[attempt - 1] = what_changed_desc
 
             yield {
                 "event": "GENERATE_COMPLETE",
@@ -254,11 +291,21 @@ def run_agent_pipeline(
                     "message": f"Maximum attempts ({max_attempts}) reached without clearing all checks. Saved to output/NEEDS_HUMAN_REVIEW.md"
                 }
 
+    # Finalize rejection log statuses and explanations
+    finalize_rejection_logs(
+        run_id=run_id,
+        final_status=final_status,
+        total_attempts=attempt,
+        retry_changes=retry_changes
+    )
+
     # 3. REFLECTOR & METRICS
+    run_source = "injected_test" if injected_lesson else "generator"
     reflector_stats = reflector.record_run(
         attempts=attempt,
         passed=(final_status == "SHIPPED"),
-        all_failed_check_ids=all_accumulated_failures
+        all_failed_check_ids=all_accumulated_failures,
+        source=run_source
     )
 
     total_api_calls = llm_client.api_call_count - initial_api_calls

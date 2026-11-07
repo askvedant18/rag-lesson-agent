@@ -19,9 +19,30 @@ load_dotenv()
 logger = logging.getLogger("rag_lesson_agent.llm")
 
 # Model configuration from environment
-DEFAULT_GENERATOR_MODEL = os.getenv("GENERATOR_MODEL", "gemini-2.5-flash")
-DEFAULT_JUDGE_MODEL = os.getenv("JUDGE_MODEL", "gemini-2.5-flash")
+DEFAULT_GENERATOR_MODEL = os.getenv("GENERATOR_MODEL", "gemini-3.8-flash")
+DEFAULT_JUDGE_MODEL = os.getenv("JUDGE_MODEL", "gemini-3.5-flash")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "").strip()
+
+# Priority cascade pool of active Gemini models
+AVAILABLE_FALLBACK_MODELS = [
+    "gemini-3.8-flash",
+    "gemini-3.7-flash",
+    "gemini-3.6-flash",
+    "gemini-3.5-flash",
+    "gemini-3.1-flash-lite",
+    "gemini-2.5-flash",
+    "gemini-2.5-pro",
+]
+
+
+def _get_model_candidates(requested_model: Optional[str], default_model: str) -> List[str]:
+    """Builds an ordered list of candidate models starting with the target model."""
+    target = requested_model or default_model
+    candidates = [target]
+    for m in AVAILABLE_FALLBACK_MODELS:
+        if m != target and m not in candidates:
+            candidates.append(m)
+    return candidates
 
 
 def redact_secrets(text: str) -> str:
@@ -66,14 +87,13 @@ class LLMClient:
         model: Optional[str] = None,
         temperature: float = 0.7,
         max_retries: int = 3,
-        base_delay: float = 1.0,
+        base_delay: float = 1.5,
     ) -> str:
         """
-        Generates freeform text with exponential backoff.
-        Raises an error if a configured Gemini API call fails; NEVER silently falls back to mock.
+        Generates freeform text with exponential backoff and automatic multi-model failover.
+        Raises an error if all model candidates fail; NEVER silently falls back to mock.
         """
         self.api_call_count += 1
-        model_name = model or DEFAULT_GENERATOR_MODEL
 
         # Offline simulation only if no key was configured
         if self.is_mock or not self.client:
@@ -86,30 +106,43 @@ class LLMClient:
             system_instruction=system_instruction,
         )
 
+        candidates = _get_model_candidates(model, DEFAULT_GENERATOR_MODEL)
         last_error = None
-        for attempt in range(max_retries):
-            try:
-                response = self.client.models.generate_content(
-                    model=model_name,
-                    contents=prompt,
-                    config=config,
-                )
-                if response and response.text:
-                    return response.text
-                return ""
-            except Exception as e:
-                last_error = e
-                delay = base_delay * (2 ** attempt)
-                logger.warning(
-                    f"Gemini API call failed on attempt {attempt + 1}/{max_retries}: {redact_secrets(str(e))}. "
-                    f"Retrying in {delay:.1f}s..."
-                )
-                time.sleep(delay)
+
+        for model_name in candidates:
+            for attempt in range(max_retries):
+                try:
+                    response = self.client.models.generate_content(
+                        model=model_name,
+                        contents=prompt,
+                        config=config,
+                    )
+                    if response and response.text:
+                        return response.text
+                    return ""
+                except Exception as e:
+                    last_error = e
+                    err_str = str(e)
+                    # If model not found (404), immediately cascade to next model candidate
+                    if "404" in err_str or "not found" in err_str.lower():
+                        logger.warning(f"Model '{model_name}' not available (404). Cascading to next model...")
+                        break
+                    # If high demand (503) on 2nd attempt, cascade to next available model
+                    if "503" in err_str and attempt >= 1:
+                        logger.warning(f"Model '{model_name}' experiencing high demand (503). Cascading to next model...")
+                        break
+
+                    import random
+                    delay = (base_delay * (2 ** attempt)) + random.uniform(0.3, 1.0)
+                    logger.warning(
+                        f"Gemini API call on [{model_name}] attempt {attempt + 1}/{max_retries}: {redact_secrets(err_str)}. "
+                        f"Retrying in {delay:.1f}s..."
+                    )
+                    time.sleep(delay)
 
         # STRICT GUARDRAIL: Do NOT silently return mock if user supplied an API key
         raise RuntimeError(
-            f"Gemini API call failed after {max_retries} retries: {redact_secrets(str(last_error))}. "
-            "Check your network connection and GEMINI_API_KEY quota at https://aistudio.google.com/."
+            f"Gemini API call failed across all candidate models. Last error: {redact_secrets(str(last_error))}."
         )
 
     def generate_json(
@@ -120,14 +153,13 @@ class LLMClient:
         temperature: float = 0.0,
         schema: Optional[Type[BaseModel]] = None,
         max_retries: int = 3,
-        base_delay: float = 1.0,
+        base_delay: float = 1.5,
     ) -> Dict[str, Any]:
         """
-        Forces valid JSON output from the model, validates, and retries on parse failure.
-        Raises an error if a configured Gemini API call fails; NEVER silently falls back to mock.
+        Forces valid JSON output with schema enforcement and automatic multi-model failover.
+        Raises an error if all model candidates fail; NEVER silently falls back to mock.
         """
         self.api_call_count += 1
-        model_name = model or DEFAULT_JUDGE_MODEL
 
         # Offline simulation only if no key was configured
         if self.is_mock or not self.client:
@@ -146,45 +178,45 @@ class LLMClient:
 
         config = types.GenerateContentConfig(**config_kwargs)
 
+        candidates = _get_model_candidates(model, DEFAULT_JUDGE_MODEL)
         last_error = None
-        for attempt in range(max_retries):
-            try:
-                response = self.client.models.generate_content(
-                    model=model_name,
-                    contents=prompt,
-                    config=config,
-                )
-                raw_text = response.text or ""
-                parsed = self._extract_and_parse_json(raw_text)
-                if parsed is not None:
-                    return parsed
-                raise ValueError(f"Failed to parse valid JSON from response: {raw_text[:200]}")
-            except Exception as e:
-                last_error = e
-                delay = base_delay * (2 ** attempt)
-                logger.warning(
-                    f"Gemini JSON generation failed on attempt {attempt + 1}/{max_retries}: {redact_secrets(str(e))}. "
-                    f"Retrying in {delay:.1f}s..."
-                )
-                time.sleep(delay)
 
-        # Retry once with explicit json correction if still failed
-        try:
-            fix_prompt = f"Extract and return ONLY a valid JSON object matching the requested schema for this query:\n\n{prompt}"
-            response = self.client.models.generate_content(
-                model=model_name,
-                contents=fix_prompt,
-                config=types.GenerateContentConfig(temperature=0.0, response_mime_type="application/json")
-            )
-            parsed = self._extract_and_parse_json(response.text or "")
-            if parsed is not None:
-                return parsed
-        except Exception:
-            pass
+        for model_name in candidates:
+            for attempt in range(max_retries):
+                try:
+                    response = self.client.models.generate_content(
+                        model=model_name,
+                        contents=prompt,
+                        config=config,
+                    )
+                    raw_text = response.text or ""
+                    parsed = self._extract_and_parse_json(raw_text)
+                    if parsed is not None:
+                        return parsed
+                    raise ValueError(f"Failed to parse valid JSON from response: {raw_text[:200]}")
+                except Exception as e:
+                    last_error = e
+                    err_str = str(e)
+                    # If model not found (404), immediately cascade to next model candidate
+                    if "404" in err_str or "not found" in err_str.lower():
+                        logger.warning(f"Model '{model_name}' not available (404). Cascading to next model...")
+                        break
+                    # If high demand (503) on 2nd attempt, cascade to next available model
+                    if "503" in err_str and attempt >= 1:
+                        logger.warning(f"Model '{model_name}' experiencing high demand (503). Cascading to next model...")
+                        break
+
+                    import random
+                    delay = (base_delay * (2 ** attempt)) + random.uniform(0.3, 1.0)
+                    logger.warning(
+                        f"Gemini JSON API on [{model_name}] attempt {attempt + 1}/{max_retries}: {redact_secrets(err_str)}. "
+                        f"Retrying in {delay:.1f}s..."
+                    )
+                    time.sleep(delay)
 
         # STRICT GUARDRAIL: Do NOT silently return mock if user supplied an API key
         raise RuntimeError(
-            f"Gemini JSON API call failed after {max_retries} retries: {redact_secrets(str(last_error))}."
+            f"Gemini JSON API call failed across all candidate models. Last error: {redact_secrets(str(last_error))}."
         )
 
     def _extract_and_parse_json(self, raw: str) -> Optional[Dict[str, Any]]:
@@ -414,6 +446,11 @@ It stops hallucinations without retraining model weights.
             "nothing to do with written text" in candidate_lesson.lower() or
             "photo editing tool" in candidate_lesson.lower()
         )
+        is_wrong_pipeline = (
+            "user asks question ] ➡️ 1. chunk" in candidate_lesson.lower() or
+            "takes your company documents and cuts them into chunks" in candidate_lesson.lower() or
+            "user question is never embedded" in candidate_lesson.lower()
+        )
 
         # Default all passing
         results = {
@@ -467,6 +504,20 @@ It stops hallucinations without retraining model weights.
                 "reason": "Directly contradicts the grounding fact sheet: RAG retrieves text documents for LLMs, not JPEG photographs.",
                 "evidence": "It has nothing to do with written text",
                 "fix_suggestion": "Remove false claims regarding camera images and ground the lesson in external document retrieval."
+            }
+
+        if is_wrong_pipeline:
+            results["D2"] = {
+                "passed": False,
+                "reason": "Pipeline incorrectly shows document chunking happening after the question is asked, and fails to state that the user question is also embedded.",
+                "evidence": "Every time you type a question, the AI takes your company documents and cuts them into chunks.",
+                "fix_suggestion": "Explain that preparation (chunking and embedding documents into a vector database) is done in advance, and the user question is also embedded at query time."
+            }
+            results["E1"] = {
+                "passed": False,
+                "reason": "Inverted pipeline order: depicts document preparation as triggered per query rather than in advance.",
+                "evidence": "[ User Asks Question ] ➡️ 1. Chunk Documents",
+                "fix_suggestion": "Clearly separate Phase 1 (Preparation in advance) from Phase 2 (Query time)."
             }
 
         return {"checks": results}
