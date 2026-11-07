@@ -102,7 +102,7 @@ python main.py --topic "Introduction to RAG"
 
 ## Web Application (UI + API)
 
-The project includes an interactive web interface featuring a modern **Japanese/Korean minimalist editorial design system** with dark/light themes, Bento-grid layouts, and real-time Server-Sent Events (SSE).
+The project includes an interactive web interface featuring a modern **Bento-grid minimalist editorial design system** with dark/light themes, card layouts, and real-time Server-Sent Events (SSE).
 
 ### Starting the Server
 ```bash
@@ -112,7 +112,7 @@ python main.py --serve
 Open **`http://127.0.0.1:8000`** in your browser.
 
 ### Key Web Features
-1. **Live Pipeline Visualizer**: Animated state machine nodes (Planner 計画 → Generator 生成 → Evaluator 評価 → Decision 決定) with glowing indicators and retry loop-back animation.
+1. **Live Pipeline Visualizer**: Animated state machine nodes (Planner → Generator → Evaluator → Decision) with glowing indicators and retry loop-back animation.
 2. **Evaluator Board**: Bento-grid of all 16 rubric check tiles with pass/fail badges. Clicking any tile opens a **side inspection drawer** revealing the criteria, exact quote from the lesson text, and fix suggestions.
 3. **Deliberate-Error Lab (Video Demo Centerpiece)**: Instant presets for `factual_error`, `jargon_dump`, and `bad_flow` with a live evaluator button.
 4. **Lesson Reader**: 18px+ typography designed for Indian students, reading progress bar, Hinglish glossary box, and interactive reveal cards for quiz questions.
@@ -157,16 +157,18 @@ rag-lesson-agent/
 │   ├── bad_lessons/                    # Deliberately flawed test lessons
 │   │   ├── factual_error.md            # Claims RAG retrains model weights (fails A2)
 │   │   ├── jargon_dump.md              # Unexplained cosine similarity (fails B3a/B3b)
-│   │   └── bad_flow.md                 # Example before definition (fails E1)
+│   │   ├── bad_flow.md                 # Example before definition (fails E1)
+│   │   └── rag_is_images_only.md       # Custom error: claims RAG is photos only (fails A1/A2)
 │   ├── test_code_checks.py             # Unit tests for deterministic checks
 │   ├── test_evaluator_catches_errors.py# Asserts evaluator catches deliberate flaws
+│   ├── test_generator_feedback.py      # Verifies retry passes failure feedback
 │   └── test_security.py                # Tests CSRF, XSS, headers, path traversal, injection
 ├── web/
 │   ├── app.py                          # FastAPI SSE endpoints & static mount
 │   ├── security.py                     # Security middleware, CSRF & rate limiters
 │   └── static/                         # Frontend assets (Vanilla ES Modules)
 │       ├── index.html                  # Bento-grid UI template
-│       ├── style.css                   # Japanese/Korean editorial minimalist stylesheet
+│       ├── style.css                   # Modern minimalist stylesheet
 │       ├── app.js                      # SSE client, rubric board & interactive quiz
 │       └── vendor/                     # Locally vendored libraries (zero external CDN)
 │           ├── marked.min.js           # Markdown parser

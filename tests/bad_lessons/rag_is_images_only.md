@@ -44,3 +44,4 @@ RAG is an AI photo editing tool that retrieves pictures to render photographs.
 1. Does RAG process camera images?
 2. What kind of file format does RAG render?
 3. What hardware is needed for photo rendering?
+

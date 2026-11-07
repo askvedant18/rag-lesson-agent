@@ -77,3 +77,4 @@ def test_generator_receives_failed_check_reasons_and_evidence():
     assert "[B1 - Average Sentence Length <= 15 Words]" in sent_prompt
     assert "Average sentence length is 19.4 words" in sent_prompt
     assert "Break long sentences into shorter clauses." in sent_prompt
+
