@@ -188,16 +188,24 @@ function updateThemeIcon(theme) {
 // -----------------------------------------------------------------------------
 // CSRF Management
 // -----------------------------------------------------------------------------
+function getCsrfToken() {
+  const match = document.cookie.match(/(?:^|; )\s*csrf_token=([^;]+)/);
+  if (match) {
+    return decodeURIComponent(match[1]);
+  }
+  return csrfToken;
+}
+
 async function setupCSRF() {
   try {
-    const res = await fetch("/api/csrf");
+    const res = await fetch("/api/csrf", { credentials: "same-origin" });
     if (res.ok) {
       const data = await res.json();
       csrfToken = data.csrf_token;
     }
 
     // Check system LLM mode (Live vs Mock)
-    const confRes = await fetch("/api/config");
+    const confRes = await fetch("/api/config", { credentials: "same-origin" });
     if (confRes.ok) {
       const conf = await confRes.json();
       const badge = document.getElementById("llmModeText");
@@ -382,14 +390,31 @@ async function startGenerationRun(topic, sampleKey = null) {
   renderAttemptsTabs();
 
   try {
-    const res = await fetch("/api/run", {
+    let token = getCsrfToken() || csrfToken;
+    let res = await fetch("/api/run", {
       method: "POST",
+      credentials: "same-origin",
       headers: {
         "Content-Type": "application/json",
-        "X-CSRF-Token": csrfToken
+        "X-CSRF-Token": token
       },
       body: JSON.stringify({ topic, sample_key: sampleKey })
     });
+
+    if (res.status === 403) {
+      // Re-synchronize CSRF token once and retry
+      await setupCSRF();
+      token = getCsrfToken() || csrfToken;
+      res = await fetch("/api/run", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRF-Token": token
+        },
+        body: JSON.stringify({ topic, sample_key: sampleKey })
+      });
+    }
 
     if (!res.ok) {
       const err = await res.json();
@@ -485,14 +510,30 @@ async function evaluateLessonLive(lessonText) {
   setSystemStatus("Evaluating", true);
 
   try {
-    const res = await fetch("/api/evaluate", {
+    let token = getCsrfToken() || csrfToken;
+    let res = await fetch("/api/evaluate", {
       method: "POST",
+      credentials: "same-origin",
       headers: {
         "Content-Type": "application/json",
-        "X-CSRF-Token": csrfToken
+        "X-CSRF-Token": token
       },
       body: JSON.stringify({ lesson_text: lessonText })
     });
+
+    if (res.status === 403) {
+      await setupCSRF();
+      token = getCsrfToken() || csrfToken;
+      res = await fetch("/api/evaluate", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRF-Token": token
+        },
+        body: JSON.stringify({ lesson_text: lessonText })
+      });
+    }
 
     if (!res.ok) {
       const err = await res.json();

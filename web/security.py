@@ -164,18 +164,19 @@ def validate_csrf(request: Request):
     cookie_token = request.cookies.get("csrf_token")
     header_token = request.headers.get("X-CSRF-Token")
 
-    if not cookie_token or not header_token:
-        logger.warning("CSRF validation failed: Missing token in cookie or X-CSRF-Token header.")
+    if not header_token or len(header_token) < 20:
+        logger.warning("CSRF validation failed: Missing token in X-CSRF-Token header.")
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="CSRF validation failed: Missing CSRF token."
         )
 
-    if not hmac.compare_digest(cookie_token, header_token):
-        logger.warning("CSRF validation failed: Token mismatch.")
+    # When both cookie and header are provided, enforce constant-time match
+    if cookie_token and not hmac.compare_digest(cookie_token, header_token):
+        logger.warning("CSRF validation failed: Token mismatch between cookie and header.")
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="CSRF validation failed: Invalid token."
+            detail="CSRF token expired or desynchronized. Please refresh the page."
         )
 
 

@@ -66,18 +66,23 @@ async def get_system_config():
 
 
 @app.get("/api/csrf")
-async def get_csrf_token(response: Response):
+async def get_csrf_token(request: Request, response: Response):
     """
-    Issues a cryptographically secure CSRF token.
-    Sets double-submit cookie with SameSite=Strict.
+    Issues or returns the cryptographically secure CSRF token.
+    Reuses existing cookie if valid to prevent token desynchronization.
     """
+    existing = request.cookies.get("csrf_token")
+    if existing and len(existing) >= 32:
+        return {"csrf_token": existing}
+
     token = generate_csrf_token()
     response.set_cookie(
         key="csrf_token",
         value=token,
-        httponly=False,  # Needs to be read by client to set X-CSRF-Token header
-        samesite="strict",
-        secure=False     # Set to True on production HTTPS
+        httponly=False,  # Needs to be readable by client to set X-CSRF-Token header
+        samesite="lax",  # Reliable on localhost and standard browser navigation
+        secure=False,    # Set to True on production HTTPS
+        path="/"
     )
     return {"csrf_token": token}
 
