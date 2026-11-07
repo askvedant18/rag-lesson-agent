@@ -166,6 +166,11 @@ def run_agent_pipeline(
                 failed_checks=failed_checks if attempt > 1 else None
             )
 
+            no_progress = False
+            if attempt > 1 and previous_lesson and current_lesson.strip() == previous_lesson.strip():
+                no_progress = True
+                logger.warning(f"No-progress detected: Attempt {attempt} is identical to Attempt {attempt - 1}.")
+
             if attempt > 1 and previous_lesson and failed_checks:
                 what_changed_desc = generator.explain_changes(
                     previous_lesson=previous_lesson,
@@ -366,6 +371,19 @@ def print_check_table(checks: List[Dict[str, Any]]):
             details = f"[Unverified Quote Flag] {details}"
         print(f"{c.get('id'):<6} {type_badge:<6} {status_text:<17} {name:<38} {details[:45]}")
     print("-" * 90)
+
+    # Print full un-truncated evidence for failed checks
+    failed = [c for c in checks if not c["passed"]]
+    if failed:
+        print(f"\n{BOLD}{RED}Diagnostic Failure Breakdown ({len(failed)} failed check(s)):{RESET}")
+        for fc in failed:
+            print(f"  • {BOLD}[{fc['id']}] {fc.get('name')}{RESET}")
+            print(f"    {YELLOW}Reason:{RESET} {fc.get('reason')}")
+            if fc.get("evidence"):
+                print(f"    {CYAN}Evidence Quote:{RESET} \"{fc.get('evidence')}\"")
+            if fc.get("fix_suggestion"):
+                print(f"    {GREEN}Fix Suggestion:{RESET} {fc.get('fix_suggestion')}")
+        print()
 
 
 def main():

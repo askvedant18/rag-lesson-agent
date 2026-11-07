@@ -24,10 +24,11 @@ checks:
     dimension: "A"
     name: "Grounding Integrity (No Fact Contradictions)"
     type: "llm"
-    pass_criteria: "The lesson contains zero claims that contradict the grounding fact sheet, specifically confirming that RAG never retrains or alters LLM weights."
+    pass_criteria: "The lesson contains zero claims that contradict the grounding fact sheet, specifically confirming that RAG never retrains or alters LLM weights, and does NOT claim RAG completely eliminates or stops hallucinations 100% (it only reduces them)."
     fail_examples:
       - "During query time, RAG retrains the model's weights."
       - "RAG modifies the neural network parameters directly."
+      - "RAG completely stops and eliminates 100% of AI hallucinations and mistakes."
 
   - id: "A3"
     dimension: "A"

@@ -5,6 +5,15 @@ In adherence to core security guardrails, autonomous LLM agents are strictly pro
 
 ---
 
+## [v1.3.0] - 2026-11-07
+### Changed
+- **Checkpoint A2 (`Grounding Integrity & Hallucination Overclaims`)**:
+  - *Previous Criteria*: Only checked that weights are not modified.
+  - *Human Revision*: Added strict requirement: `"does NOT claim RAG completely eliminates or stops hallucinations 100% (it only reduces them)." Flagging overclaims ensures technical honesty.`
+  - *Pedagogical Rationale*: Beginners must learn that RAG dramatically grounds generation, but cannot mathematically guarantee zero hallucinations if source documents are contradictory or ambiguous.
+
+---
+
 ## [v1.2.0] - 2026-11-07
 ### Changed
 - **Checkpoint D2 (`Two-Phase Pipeline & Question Embedding`)**:
@@ -34,3 +43,4 @@ In adherence to core security guardrails, autonomous LLM agents are strictly pro
   - Dimension C: Teaches by Example (C1, C2)
   - Dimension D: Concept Coverage (D1, D2, D3)
   - Dimension E: Coherent Flow & Assessment (E1, E2a, E2b)
+

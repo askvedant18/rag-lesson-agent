@@ -164,17 +164,34 @@ Return the complete revised lesson in Markdown.
     ) -> str:
         """
         Asks LLM to explain what changed on retry in 2-3 plain sentences against the failed checks.
+        Detects if no progress was made between drafts.
         """
-        check_ids = [c.get("id") for c in failed_checks]
+        if previous_lesson.strip() == new_lesson.strip():
+            logger.warning("No progress: regenerated lesson is character-for-character identical.")
+            return "No progress made: regenerated draft is identical to previous attempt."
+
+        check_summaries = [
+            f"Check [{c.get('id')}]: {c.get('name', '')} (Reason: {c.get('reason', '')})"
+            for c in failed_checks
+        ]
+        checks_text = "\n".join(check_summaries)
+
         prompt = f"""
-Compare the previous lesson against the new lesson regarding these failed checks: {check_ids}.
-In 2-3 plain sentences, summarize exactly what changed on this retry.
+Compare the previous lesson against the new lesson regarding these failed checks:
+{checks_text}
+
+In 2-3 plain sentences, summarize exactly what changed in the new lesson to resolve the failed checks above.
+Be specific about what was added, removed, or rewritten.
 
 PREVIOUS LESSON:
-{previous_lesson[:1200]}
+\"\"\"
+{previous_lesson}
+\"\"\"
 
 NEW LESSON:
-{new_lesson[:1200]}
+\"\"\"
+{new_lesson}
+\"\"\"
 """
         explanation = self.llm.generate_text(prompt=prompt, temperature=0.2)
         return explanation.strip()

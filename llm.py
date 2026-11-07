@@ -451,6 +451,10 @@ It stops hallucinations without retraining model weights.
             "takes your company documents and cuts them into chunks" in candidate_lesson.lower() or
             "user question is never embedded" in candidate_lesson.lower()
         )
+        is_overclaim = (
+            "completely eliminates 100% of ai hallucinations" in candidate_lesson.lower() or
+            "guaranteed to never produce false information" in candidate_lesson.lower()
+        )
 
         # Default all passing
         results = {
@@ -518,6 +522,14 @@ It stops hallucinations without retraining model weights.
                 "reason": "Inverted pipeline order: depicts document preparation as triggered per query rather than in advance.",
                 "evidence": "[ User Asks Question ] ➡️ 1. Chunk Documents",
                 "fix_suggestion": "Clearly separate Phase 1 (Preparation in advance) from Phase 2 (Query time)."
+            }
+
+        if is_overclaim:
+            results["A2"] = {
+                "passed": False,
+                "reason": "Lesson overclaims that RAG completely eliminates 100% of hallucinations. RAG reduces hallucinations, but cannot guarantee zero hallucinations.",
+                "evidence": "RAG completely eliminates 100% of AI hallucinations and mistakes.",
+                "fix_suggestion": "State that RAG reduces hallucinations, rather than claiming 100% elimination."
             }
 
         return {"checks": results}

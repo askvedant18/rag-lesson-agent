@@ -86,6 +86,20 @@ def test_wrong_pipeline_order_fails_d2_and_e1(evaluator):
     assert "D2" in failed_ids or "E1" in failed_ids, f"Expected D2 or E1 to fail, got: {failed_ids}"
 
 
+def test_overclaim_fails_a2(evaluator):
+    """
+    Human-approved rubric check test:
+    overclaim.md claims RAG eliminates 100% of hallucinations.
+    Must fail A2.
+    """
+    lesson = load_bad_lesson("overclaim.md")
+    result = evaluator.evaluate(lesson)
+
+    assert result["passed"] is False
+    failed_ids = {c["id"] for c in result["failed_checks"]}
+    assert "A2" in failed_ids, f"Expected A2 to fail, got: {failed_ids}"
+
+
 def test_passing_lesson_clears_all_rubric_checks(evaluator):
     """A high-quality compliant lesson must pass 100% of rubric checks."""
     from llm import get_llm_client
