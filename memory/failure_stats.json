@@ -1,13 +1,19 @@
 {
-  "total_runs": 2,
-  "successful_runs": 2,
+  "total_runs": 4,
+  "successful_runs": 4,
   "human_review_runs": 0,
   "attempts_history": [
     2,
+    2,
+    1,
     2
   ],
   "check_failures": {
     "B2": 1,
-    "E2a": 2
+    "E2a": 2,
+    "A2": 1,
+    "B3a": 1,
+    "D2": 1,
+    "E1": 1
   }
 }

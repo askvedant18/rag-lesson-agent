@@ -424,9 +424,13 @@ def main():
         for cid, count in stats.get("check_failures", {}).items():
             print(f"  - Check {cid:<5}: {count} failure(s)")
 
-        print(f"\n{BOLD}Active Learned Generator Rules ({len(rules)}):{RESET}")
+        print(f"\n{BOLD}Learned Generator Rules ({len(rules)}):{RESET}")
         for r in rules:
-            print(f"  [{r.get('id')}] (from {r.get('created_from_check')}): {r.get('rule_text')}")
+            status_tag = f"{GREEN}[APPROVED]{RESET}" if r.get("approved", True) else f"{RED}[REJECTED BY HUMAN REVIEW]{RESET}"
+            print(f"  [{r.get('id')}] (from {r.get('created_from_check')}) {status_tag}:")
+            print(f"    \"{r.get('rule_text')}\"")
+            if not r.get("approved", True) and r.get("rejection_reason"):
+                print(f"    {YELLOW}Human Review Note:{RESET} {r.get('rejection_reason')}")
 
         print(f"\n{BOLD}Proposed Rubric Changes Quarantined for Human Review ({len(proposals)}):{RESET}")
         for p in proposals:

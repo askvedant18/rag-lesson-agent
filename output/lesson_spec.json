@@ -1,6 +1,6 @@
 {
   "topic": "Introduction to RAG (Retrieval-Augmented Generation)",
-  "learner_profile": "12th-grade graduate from India, non-English-medium background, zero prior AI knowledge, limited technical vocabulary.",
+  "learner_profile": "12th-grade graduate from India, non-English-medium background, limited technical vocabulary, zero prior AI knowledge.",
   "must_cover_concepts": [
     "What is RAG (Retrieval-Augmented Generation)",
     "Why it matters (hallucination, outdated knowledge, private company data)",
@@ -20,10 +20,10 @@
     "prompt",
     "vector database"
   ],
-  "analogy": "The Open-Book Exam: An LLM is like a student who has memorized many books, but RAG is like giving that student a textbook to look at during an exam so they don't have to guess.",
+  "analogy": "The Open-Book Exam: An LLM is like a student who has memorized a lot of general knowledge, but RAG is like giving that student a textbook to look at during an exam so they can answer specific questions accurately.",
   "everyday_examples": [
-    "A student using a specific college handbook to answer questions about admission rules instead of guessing based on general knowledge.",
-    "A bank employee using a private database of internal circulars to answer customer queries instead of relying on public internet information."
+    "A student using a textbook to answer a specific question about Indian History that isn't in their memory.",
+    "A bank employee searching through a private company manual to answer a customer's specific query about a new loan policy."
   ],
   "outline": [
     "Section 1: Hook and Everyday Analogy",
