@@ -1,10 +1,1 @@
-[
-  {
-    "id": "RULE-001",
-    "rule_text": "Always introduce any technical term with a short definition in parentheses or right after the word 'is'.",
-    "created_from_check": "E2a",
-    "created_at": "2026-11-06T11:21:53.056897+00:00",
-    "times_used": 0,
-    "approved": true
-  }
-]
+[]

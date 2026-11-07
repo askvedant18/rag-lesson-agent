@@ -368,9 +368,23 @@ It stops hallucinations without retraining model weights.
 
         # 2. Reflector request
         if "reflector" in (system_instruction or "").lower() or "propose" in prompt.lower():
+            target_check = "B3a"
+            rule_text = "Always introduce any technical term with a short definition in parentheses or right after the word 'is'."
+            if "E2a" in prompt:
+                target_check = "E2a"
+                rule_text = "Ensure the final section has a clear 'Recap' heading followed by exactly 3 numbered quiz questions."
+            elif "A2" in prompt:
+                target_check = "A2"
+                rule_text = "Explicitly emphasize that RAG never retrains or alters neural network model weights."
+            elif "B1" in prompt or "B2" in prompt:
+                target_check = "B1"
+                rule_text = "Break long compound sentences into short, direct sentences with 15 or fewer words."
+            elif "E1" in prompt:
+                target_check = "E1"
+                rule_text = "Always define what the core concept is before introducing worked examples."
             return {
-                "rule_proposal": "Always introduce any technical term with a short definition in parentheses or right after the word 'is'.",
-                "target_check": "B3a",
+                "rule_proposal": rule_text,
+                "target_check": target_check,
                 "rubric_feedback": None
             }
 

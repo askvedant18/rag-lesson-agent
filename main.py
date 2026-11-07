@@ -123,19 +123,19 @@ def run_agent_pipeline(
                 "target_failed_checks": [c.get("id") for c in failed_checks]
             }
 
-            if attempt > 1 and previous_lesson and failed_checks:
-                what_changed_desc = generator.explain_changes(
-                    previous_lesson=previous_lesson,
-                    new_lesson=current_lesson if current_lesson else "Draft revision",
-                    failed_checks=failed_checks
-                )
-
             current_lesson = generator.generate(
                 lesson_spec=lesson_spec,
                 attempt_number=attempt,
                 previous_lesson=previous_lesson if attempt > 1 else None,
                 failed_checks=failed_checks if attempt > 1 else None
             )
+
+            if attempt > 1 and previous_lesson and failed_checks:
+                what_changed_desc = generator.explain_changes(
+                    previous_lesson=previous_lesson,
+                    new_lesson=current_lesson,
+                    failed_checks=failed_checks
+                )
 
             yield {
                 "event": "GENERATE_COMPLETE",
