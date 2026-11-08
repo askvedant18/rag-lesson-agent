@@ -195,7 +195,7 @@ Some quality checks can be measured exactly: sentence length, headings, number o
 **2. Hard PASS/FAIL checkpoints, zero partial credit**  
 Numerical scores like "8/10" obscure critical failures and incentivize prompt gaming via averaging. Each of the 16 checks either passes or fails. A lesson ships only when every single check clears. This guarantees unambiguous quality standards and actionable diagnostic feedback.
 
-**3. Distinct model families & temperature 0 for evaluation**  
+**3. Distinct models & temperature 0 for evaluation**  
 The generator uses `gemini-3.5-flash` at temperature 0.7 for creative pedagogical analogies, while the evaluator uses `gemini-3.1-flash-lite` at temperature 0.0 for strict compliance checking. Using a separate model prevents self-reinforcing stylistic biases. Furthermore, the evaluator must cite exact verbatim evidence quotes from the lesson text, and the Python harness verifies quote presence programmatically to reduce judge hallucination (`judge_evidence_unverified`).
 
 **4. Finite 3-attempt state machine with human-review fallback**  
