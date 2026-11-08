@@ -3,10 +3,9 @@
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-green.svg)](https://fastapi.tiangolo.com/)
 [![Google GenAI](https://img.shields.io/badge/Google_GenAI-Official_SDK-orange.svg)](https://ai.google.dev/)
-[![Tests Passing](https://img.shields.io/badge/pytest-23%2F23%20passed-brightgreen.svg)]()
-[![Security Audited](https://img.shields.io/badge/Security-Hardened%20(XSS%2FCSRF%2FHeaders)-purple.svg)](SECURITY.md)
+[![Tests Passing](https://img.shields.io/badge/pytest-27%2F27%20passed-brightgreen.svg)]()
 
-An agentic, self-evaluating lesson generator designed for the **GenAI Engineer - Content Systems** role. The system plans, drafts, rigorously evaluates, and autonomously regenerates educational content for 12th-grade graduates from India with zero AI background and non-English-medium schooling. It operates an explicit **Generate → Evaluate → Regenerate** state machine loop with hard PASS/FAIL checkpoints, memory-driven self-evolution, and an offline fallback for testing.
+An agentic, self-evaluating lesson generator designed for the **GenAI Engineer - Content Systems** role. The system plans, drafts, rigorously evaluates, and autonomously regenerates educational content for 12th-grade graduates from India with zero AI background and non-English-medium schooling. It operates an explicit **Generate → Evaluate → Regenerate** state machine loop with hard PASS/FAIL checkpoints and memory-driven self-evolution.
 
 ---
 
@@ -70,16 +69,21 @@ An agentic, self-evaluating lesson generator designed for the **GenAI Engineer -
 ## 3-Step Setup & Run
 
 ### Step 1: Install Dependencies
+Tested with Python 3.12. Use a virtual environment:
 ```bash
+python -m venv .venv
+# On Windows PowerShell: .venv\Scripts\Activate.ps1
+# On macOS/Linux: source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### Step 2: Configure Environment (Optional for Live Gemini)
+### Step 2: Configure Environment
 ```bash
 cp .env.example .env
 # Edit .env and paste your GEMINI_API_KEY from https://aistudio.google.com/
 ```
-> **Note:** If no API key is supplied, the system operates in **deterministic offline fallback mode**. All tests, CLI runs, and the Web UI work out-of-the-box hermetically!
+> **A real Gemini API key is required for real runs.** Without a key, the system starts in a clearly labelled **OFFLINE MOCK MODE**. It exists only for running the test suite without network access. Mock outputs are marked `is_mock: true` in every log and are never real lesson content.  
+> *Tip: Keep the judge model (`gemini-3.1-flash-lite`) separate from the generator model (`gemini-3.5-flash`) to prevent self-reinforcing stylistic bias.*
 
 ### Step 3: Run the Agent Loop
 ```bash
@@ -115,7 +119,7 @@ Open **`http://127.0.0.1:8000`** in your browser.
 1. **Live Pipeline Visualizer**: Animated state machine nodes (Planner → Generator → Evaluator → Decision) with glowing indicators and retry loop-back animation.
 2. **Evaluator Board**: Bento-grid of all 16 rubric check tiles with pass/fail badges. Clicking any tile opens a **side inspection drawer** revealing the criteria, exact quote from the lesson text, and fix suggestions.
 3. **Deliberate-Error Lab (Video Demo Centerpiece)**: Instant presets for `factual_error`, `jargon_dump`, and `bad_flow` with a live evaluator button.
-4. **Lesson Reader**: 18px+ typography designed for Indian students, reading progress bar, Hinglish glossary box, and interactive reveal cards for quiz questions.
+4. **Lesson Reader**: 18px+ typography designed for Indian students, reading progress bar, Plain-English glossary box, and interactive reveal cards for quiz questions.
 5. **Memory & Reflection Dashboard**: Plain SVG bar chart showing cumulative check failures across runs, synthesized generator rules, and quarantined rubric change proposals.
 6. **Rejection Log Viewer**: Filterable historical log of rejected drafts.
 
@@ -183,31 +187,16 @@ rag-lesson-agent/
 
 ---
 
-## Design Decisions & Trade-Offs
-
-### 1. Why a Hybrid Evaluator (Code Checks + LLM Judge)?
-- **Deterministic Code Checks** are cheap, sub-millisecond, objective, and predictable. Grammatical constraints like sentence length ($\le 15$ words avg, $\le 25$ words max), presence of required headings, and quiz question counts do not require probabilistic inference.
-- **LLM Judge (Temperature 0)** excels at semantic understanding: detecting whether a lesson contradicts grounding facts, whether an everyday analogy is sustained, or whether technical jargon is explained in accessible language.
-- **Combining Them Eliminates Hallucination**: If the LLM judge claims a lesson failed and quotes an evidence string, the evaluator programmatically verifies whether that quote actually exists in the lesson text. If it does not, it is flagged as `judge_evidence_unverified`.
-
-### 2. Why Hard PASS/FAIL Instead of Numerical Scores?
-- Numerical scores (e.g. 7.5/10) encourage **gaming through averaging**: a lesson with great grammar (10/10) but a critical factual falsehood (5/10) could receive an 8/10 and mistakenly ship.
-- In content generation for beginner students, a single factual error (e.g. telling a student that RAG retrains neural weights) is catastrophic. **Hard pass/fail with zero partial credit** ensures that every standard must clear before shipping.
-
-### 3. Why Max 2 Retries (3 Attempts Total) + Human Review Fallback?
-- Autonomous agent loops without termination bounds risk infinite loops, spiraling API bills, and runaway hallucinations.
-- Bounding execution to 3 attempts guarantees termination. If the lesson still fails after Attempt 3, the system does **NOT** silently ship flawed content; it halts and produces `output/NEEDS_HUMAN_REVIEW.md` containing the diagnostic failure audit.
-
 ## Design Decisions and Trade-offs
 
 **1. Hybrid evaluator (code checks + LLM judge)**  
-Some quality checks can be measured exactly: sentence length, headings, number of quiz questions, and technical jargon defined at first use. These are executed via deterministic Python code (`checks/code_checks.py`). They are free, instantaneous, and 100% repeatable. Other dimensions require semantic comprehension: logical pedagogical flow, clear analogies, and factual grounding against the fact sheet. These are evaluated by an LLM judge (`gemini-3.1-flash-lite`). Combining both ensures objective constraints are strictly enforced while semantic nuance is preserved.
+Some quality checks can be measured exactly: sentence length, headings, number of quiz questions, and technical jargon defined at first use. These are executed via deterministic Python code (`checks/code_checks.py`). They are free, instantaneous, and 100% repeatable. Other dimensions require semantic comprehension: logical pedagogical flow, clear analogies, and factual grounding against the fact sheet. These are evaluated by an LLM judge (`gemini-3.1-flash-lite`). Combining them reduces judge hallucination while ensuring objective constraints are strictly enforced.
 
 **2. Hard PASS/FAIL checkpoints, zero partial credit**  
 Numerical scores like "8/10" obscure critical failures and incentivize prompt gaming via averaging. Each of the 16 checks either passes or fails. A lesson ships only when every single check clears. This guarantees unambiguous quality standards and actionable diagnostic feedback.
 
 **3. Distinct model families & temperature 0 for evaluation**  
-The generator uses `gemini-3.5-flash` at temperature 0.7 for creative pedagogical analogies, while the evaluator uses `gemini-3.1-flash-lite` at temperature 0.0 for strict compliance checking. Using a separate model prevents self-reinforcing stylistic biases. Furthermore, the evaluator must cite exact verbatim evidence quotes from the lesson text, and the Python harness verifies quote presence programmatically to prevent judge hallucinations (`judge_evidence_unverified`).
+The generator uses `gemini-3.5-flash` at temperature 0.7 for creative pedagogical analogies, while the evaluator uses `gemini-3.1-flash-lite` at temperature 0.0 for strict compliance checking. Using a separate model prevents self-reinforcing stylistic biases. Furthermore, the evaluator must cite exact verbatim evidence quotes from the lesson text, and the Python harness verifies quote presence programmatically to reduce judge hallucination (`judge_evidence_unverified`).
 
 **4. Finite 3-attempt state machine with human-review fallback**  
 Endless retry loops waste tokens, increase latency, and can spiral into degraded generation. The system bounds retries to a maximum of 3 attempts. If criteria remain unsatisfied after 3 attempts, the system refuses to silently ship substandard material; it persists the draft and diagnostic failure report to `output/NEEDS_HUMAN_REVIEW.md`.
@@ -226,6 +215,21 @@ Untrusted LLM outputs are rendered via marked.js and strictly sanitized with DOM
 
 ---
 
+## Results from Real Runs (Live Gemini)
+
+| Run | Attempts to Pass | Failed on Attempt 1 | Status |
+|:---:|:---:|:---|:---:|
+| 1 | 2 | B2 (sentence length), E2a (quiz count) | SHIPPED |
+| 2 | 2 | E2a (quiz count) | SHIPPED |
+| 3 | 1 | None (all 16 passed on first try) | SHIPPED |
+
+> **Note on evaluation logs:**
+> - Check **E2a** failed initially due to a regex limitation in my own Python checker (it required a `?` on every quiz line, missing True/False statements). Once the checker was fixed, Run 3 passed on Attempt 1.
+> - The failures on **A2, B3a, D2, and E1** in `memory/failure_stats.json` come from my injected test lessons (`--inject-bad`), not from the generator drafting.
+> - **Auto-learned rules:** The Reflector agent is implemented and tested, but no auto-learned rule is currently active (`RULE-001` was rejected during human review as too vague).
+
+---
+
 ## Real Bugs Found by Reading My Own Logs (HITL Engineering)
 
 - **Symptom**: `explain_changes()` reported that the draft was "identical and cut off mid-sentence at Section 2", even though the new attempt cleared all checks.  
@@ -237,9 +241,9 @@ Untrusted LLM outputs are rendered via marked.js and strictly sanitized with DOM
 - **Symptom**: The first synthesized rule (`RULE-001`) was too vague ("map every learning objective to an assessment task").  
   **Root Cause**: The Reflector prompt only passed `{check_id}` (`E2a`) without its name or pass criteria, forcing the model to guess what E2a meant.  
   **Fix**: Injected the check's exact name and pass criteria into the Reflector prompt, and marked `RULE-001` as `"approved": false` in `learned_rules.json` with reason *"Too vague: did not enforce quiz numbering format"*.
-- **Symptom**: Evaluator initially passed a lesson depicting document chunking *after* the user typed their prompt.  
-  **Root Cause**: Check `D2` only checked for the presence of the 4 terms, not their two-phase execution order.  
-  **Fix**: Updated `D2` pass criteria in `rubric.yaml`, added `rubric/CHANGELOG.md` entry, created `tests/bad_lessons/wrong_pipeline_order.md`, and added automated test.
+- **Symptom:** The judge passed a lesson that showed the wrong pipeline order (question first, then chunking and embedding).  
+  **Root Cause:** Check `D2` only checked that the four terms appeared, not the execution order of the two phases.  
+  **Fix:** Updated `D2` and `E1` pass criteria in `rubric/rubric.yaml` (human change, logged in `rubric/CHANGELOG.md`), added `tests/bad_lessons/wrong_pipeline_order.md`, and added an automated regression test.
 
 ---
 
@@ -306,7 +310,7 @@ tests/test_security.py::test_secrets_redaction PASSED
 - **Approximate Readability Proxies**: Sentence length heuristics ($\le 15$ words avg, $\le 25$ words max) are effective proxies for 12th-grade learners, but do not capture regional vocabulary variations.
 
 ### Future Work
-- **Multi-Lingual Glossaries**: Support Tamil, Telugu, Marathi, and Bengali alongside Hinglish.
+- **Multi-Lingual Glossaries**: Add Hindi, Tamil, and Telugu glossaries alongside plain English.
 - **Multi-Model Jury Voting**: Add an optional second independent judge (e.g. Claude or GPT) to vote on disputed semantic checks.
 - **Automated Human-in-the-Loop Web Interface**: Expand the memory dashboard to allow one-click human approval or editing of synthesized rules.
 
