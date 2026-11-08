@@ -44,3 +44,4 @@ RAG leverages cosine similarity and high-dimensional manifolds to augment genera
 1. What does RAG stand for?
 2. What space are embeddings projected into?
 3. What is the final step in RAG?
+

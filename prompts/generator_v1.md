@@ -7,24 +7,29 @@ Your mission is to write a standalone beginner lesson that anyone with zero AI b
 1. **Sentence Length**:
    - Average sentence length MUST be 15 words or fewer.
    - NO sentence can ever exceed 25 words. Keep sentences short, punchy, and direct.
-2. **Vocabulary**:
-   - Use simple, everyday English words.
-   - Avoid Western idioms, American slang, or complicated academic jargon.
+2. **Vocabulary & Phrasing**:
+   - Use simple, everyday English words suitable for a beginner student.
+   - Avoid Western idioms, American slang, or complicated academic words (e.g. do NOT use "garbage in, garbage out", "it is not magic", "crucially", "paradigm shift"). Use plain words like "if the notes have wrong facts, the answer will also be wrong".
 3. **Jargon Rule**:
    - Every technical term (such as LLM, chunk, embedding, vector, retrieval, hallucination, prompt, knowledge base, vector database) MUST be clearly defined at its very first occurrence using patterns like "is...", "means...", or parenthetical explanations "(...)".
-4. **Analogies & Cultural Anchors**:
-   - Use ONE primary everyday Indian analogy throughout the whole lesson (e.g. an open-book exam vs a closed-book exam, or looking up notices on a college board).
+4. **Analogy Consistency**:
+   - Use ONE primary everyday Indian analogy throughout the whole lesson: an open-book exam vs a closed-book exam. Do not switch analogies midway.
 5. **Required Structure & Headings**:
-   - Section 1: Hook and Everyday Analogy
-   - Section 2: What is RAG? (Must contain heading with "What")
-   - Section 3: Why Does RAG Matter? (Must contain heading with "Why" - cover hallucinations, outdated facts, and private data)
-   - Section 4: How Does RAG Work? (Must contain heading with "How" - explain the 4 steps: chunk, embed, retrieve, generate)
-   - Section 5: Worked Step-by-Step Example (Explicitly show: User Question -> Retrieved Text -> Final LLM Answer)
-   - Section 6: Limitations of RAG (Garbage in garbage out, search misses, extra time/cost)
+   - Section 1: Hook and Everyday Analogy (The Open-Book Exam)
+   - Section 2: What is RAG? (Must contain heading with "What". Define Augmented strictly as: "Augmented means adding the found facts to your question prompt." Define weights strictly as: "Weights are the numbers inside an AI model that it learned during training.")
+   - Section 3: Why Does RAG Matter? (Must contain heading with "Why" - explain that RAG REDUCES hallucinations, but NEVER claim it stops or eliminates them completely. Cover outdated facts and private data.)
+   - Section 4: How Does RAG Work? (Must contain heading with "How". MUST show the TWO phases in correct order:
+     * Phase 1: Preparation (Done once in advance): Documents -> Chunk -> Embed -> Store in vector database. Emphasize that chunking happens to library documents BEFORE any question is asked! Mention that real-world vectors have hundreds of numbers (like 768 or 1536 dimensions).
+     * Phase 2: Question Time (On every question): Question -> Embed question into numbers -> Retrieve closest chunks by comparing numbers -> Generate final answer with LLM.)
+   - Section 5: Worked Step-by-Step Example (Explicitly show: User Question -> Question converted to numbers [note that real vectors have hundreds of numbers] -> Retrieved Text Chunk -> Final LLM Answer)
+   - Section 6: Limitations of RAG (Wrong notes give wrong answers, search misses, extra time, and the AI can still misread notes and make mistakes)
    - Section 7: Hinglish Glossary (A small bulleted box translating key terms into simple Hindi/Hinglish)
-   - Section 8: Recap and Quick Check (Must contain "Recap" heading and EXACTLY 3 numbered quiz questions answerable directly from the text)
-6. **Strict Fact**:
-   - RAG NEVER retrains or alters the model's weights. Emphasize this clearly!
+   - Section 8: Recap and Quick Check (Must contain "Recap" heading, followed by "### Quick Check" with EXACTLY 3 lines starting with 1. 2. 3. Q2 MUST be: "2. True or False: RAG changes the AI model's weights." Answers MUST ONLY be inside a `<details><summary>Click to reveal answers</summary>...</details>` block.)
+6. **Strict Facts**:
+   - RAG NEVER retrains or alters the model's weights.
+   - RAG REDUCES hallucinations; it does NOT completely eliminate or stop them 100%.
+   - Chunking and embedding documents happens in advance during preparation, NOT after the user asks a question.
+   - The user's question is ALSO converted into numbers (embedded) to match with stored chunk numbers.
 
 ## Self-Correction on Retry
 If you are revising a previous attempt:
@@ -32,3 +37,4 @@ If you are revising a previous attempt:
 - You must fix ONLY the failed checks.
 - Do NOT rewrite or damage sections that already passed.
 - Apply all active learned rules provided.
+

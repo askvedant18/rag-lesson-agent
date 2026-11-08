@@ -292,23 +292,23 @@ def check_e2a_recap_and_quiz(text: str) -> Dict[str, Any]:
     question_count = 0
     if quiz_section_match:
         quiz_text = quiz_section_match.group(1)
+        # Strip out answer key blocks or <details> so answers are not counted as questions
+        quiz_text_clean = re.sub(r"<details[\s\S]*?</details>", "", quiz_text, flags=re.IGNORECASE)
+        quiz_text_clean = re.split(r"(?i)#+\s*(?:answers?|answer key)", quiz_text_clean)[0]
+
+        # Count quiz items: matches '1.', '1)', 'Q1.', 'Q1:' in the quiz section
         numbered_questions = [
             l.strip()
-            for l in quiz_text.splitlines()
-            if re.match(r"^(\d+\.|\bQ\d+[:\.\)])\s+.+", l.strip())
+            for l in quiz_text_clean.splitlines()
+            if re.match(r"^(\d+[\.\)]|\bQ\d+[:\.\)])\s+.+", l.strip())
         ]
-        if numbered_questions:
-            question_count = len(numbered_questions)
-        else:
-            # Fallback: count lines ending with '?' in quiz section
-            q_lines = [line for line in quiz_text.splitlines() if "?" in line and not line.strip().startswith("#")]
-            question_count = len(q_lines)
+        question_count = len(numbered_questions)
     else:
         # Check global questions count in text
         q_lines = [
             line.strip()
             for line in text.splitlines()
-            if re.match(r"^(\d+\.|\bQ\d+[:\.\)])\s+.+", line.strip()) and "?" in line
+            if re.match(r"^(\d+[\.\)]|\bQ\d+[:\.\)])\s+.+", line.strip()) and ("?" in line or "true or false" in line.lower())
         ]
         question_count = len(q_lines)
 

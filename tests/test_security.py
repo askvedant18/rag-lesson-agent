@@ -134,3 +134,4 @@ def test_secrets_redaction():
     redacted = redact_secrets(sensitive_text)
     assert "AIzaSy" not in redacted
     assert "[REDACTED_GEMINI_KEY]" in redacted
+

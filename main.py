@@ -43,6 +43,41 @@ def append_rejection_log(entry: Dict[str, Any]):
         f.write(json.dumps(entry) + "\n")
 
 
+def finalize_rejection_logs(
+    run_id: str,
+    final_status: str,
+    total_attempts: int,
+    retry_changes: Dict[int, str]
+):
+    """
+    Updates all rejection log entries for run_id with the final run outcome
+    and the actual what_changed_on_retry explanations produced on retry.
+    """
+    if not os.path.exists(REJECTION_LOG_PATH):
+        return
+
+    updated_lines = []
+    with open(REJECTION_LOG_PATH, "r", encoding="utf-8") as f:
+        for line in f:
+            if not line.strip():
+                continue
+            try:
+                record = json.loads(line)
+                if record.get("run_id") == run_id:
+                    record["final_status"] = final_status
+                    record["total_attempts"] = total_attempts
+                    att = record.get("attempt", 1)
+                    if att in retry_changes:
+                        record["what_changed_on_retry"] = retry_changes[att]
+                updated_lines.append(json.dumps(record))
+            except Exception:
+                updated_lines.append(line.strip())
+
+    with open(REJECTION_LOG_PATH, "w", encoding="utf-8") as f:
+        for l in updated_lines:
+            f.write(l + "\n")
+
+
 def run_agent_pipeline(
     topic: str = "Introduction to RAG (Retrieval-Augmented Generation)",
     injected_lesson: Optional[str] = None,
@@ -70,6 +105,7 @@ def run_agent_pipeline(
     yield {
         "event": "PLAN_START",
         "run_id": run_id,
+        "is_mock": llm_client.is_mock,
         "message": f"Planning curriculum specification for: '{topic}'"
     }
 
@@ -91,6 +127,7 @@ def run_agent_pipeline(
     failed_checks: List[Dict[str, Any]] = []
     failed_history: Dict[int, List[str]] = {}
     what_changed_desc = ""
+    retry_changes: Dict[int, str] = {}
     final_status = "IN_PROGRESS"
     all_accumulated_failures: List[str] = []
 
@@ -122,19 +159,25 @@ def run_agent_pipeline(
                 "target_failed_checks": [c.get("id") for c in failed_checks]
             }
 
-            if attempt > 1 and previous_lesson and failed_checks:
-                what_changed_desc = generator.explain_changes(
-                    previous_lesson=previous_lesson,
-                    new_lesson=current_lesson if current_lesson else "Draft revision",
-                    failed_checks=failed_checks
-                )
-
             current_lesson = generator.generate(
                 lesson_spec=lesson_spec,
                 attempt_number=attempt,
                 previous_lesson=previous_lesson if attempt > 1 else None,
                 failed_checks=failed_checks if attempt > 1 else None
             )
+
+            no_progress = False
+            if attempt > 1 and previous_lesson and current_lesson.strip() == previous_lesson.strip():
+                no_progress = True
+                logger.warning(f"No-progress detected: Attempt {attempt} is identical to Attempt {attempt - 1}.")
+
+            if attempt > 1 and previous_lesson and failed_checks:
+                what_changed_desc = generator.explain_changes(
+                    previous_lesson=previous_lesson,
+                    new_lesson=current_lesson,
+                    failed_checks=failed_checks
+                )
+                retry_changes[attempt - 1] = what_changed_desc
 
             yield {
                 "event": "GENERATE_COMPLETE",
@@ -193,6 +236,7 @@ def run_agent_pipeline(
             rejection_record = {
                 "run_id": run_id,
                 "timestamp": datetime.now(timezone.utc).isoformat(),
+                "is_mock": llm_client.is_mock,
                 "attempt": attempt,
                 "prompt_version": prompt_version,
                 "failed_check_ids": failed_ids,
@@ -252,17 +296,28 @@ def run_agent_pipeline(
                     "message": f"Maximum attempts ({max_attempts}) reached without clearing all checks. Saved to output/NEEDS_HUMAN_REVIEW.md"
                 }
 
+    # Finalize rejection log statuses and explanations
+    finalize_rejection_logs(
+        run_id=run_id,
+        final_status=final_status,
+        total_attempts=attempt,
+        retry_changes=retry_changes
+    )
+
     # 3. REFLECTOR & METRICS
+    run_source = "injected_test" if injected_lesson else "generator"
     reflector_stats = reflector.record_run(
         attempts=attempt,
         passed=(final_status == "SHIPPED"),
-        all_failed_check_ids=all_accumulated_failures
+        all_failed_check_ids=all_accumulated_failures,
+        source=run_source
     )
 
     total_api_calls = llm_client.api_call_count - initial_api_calls
     summary_data = {
         "run_id": run_id,
         "topic": topic,
+        "is_mock": llm_client.is_mock,
         "timestamp": started_at,
         "total_attempts": attempt,
         "final_status": final_status,
@@ -286,9 +341,19 @@ def run_agent_pipeline(
 
 
 def print_cli_banner():
+    llm = get_llm_client()
     print(f"\n{BOLD}{CYAN}===================================================================={RESET}")
     print(f"{BOLD}{CYAN}   rag-lesson-agent | Self-Evaluating Content Generation System      {RESET}")
-    print(f"{BOLD}{CYAN}===================================================================={RESET}\n")
+    print(f"{BOLD}{CYAN}===================================================================={RESET}")
+    if llm.is_mock:
+        print(f"{BOLD}{YELLOW}⚠️  [OFFLINE MOCK MODE ACTIVE]{RESET}")
+        print(f"   No GEMINI_API_KEY detected in .env. Outputs are generated offline.")
+        print(f"   Add your key to .env (from https://aistudio.google.com/) for live AI.")
+    else:
+        from llm import DEFAULT_GENERATOR_MODEL, DEFAULT_JUDGE_MODEL
+        print(f"{BOLD}{GREEN}✨ [LIVE GEMINI API CONNECTED]{RESET}")
+        print(f"   Generator Model: {DEFAULT_GENERATOR_MODEL} | Judge Model: {DEFAULT_JUDGE_MODEL}")
+    print(f"{CYAN}--------------------------------------------------------------------{RESET}\n")
 
 
 def print_check_table(checks: List[Dict[str, Any]]):
@@ -306,6 +371,19 @@ def print_check_table(checks: List[Dict[str, Any]]):
             details = f"[Unverified Quote Flag] {details}"
         print(f"{c.get('id'):<6} {type_badge:<6} {status_text:<17} {name:<38} {details[:45]}")
     print("-" * 90)
+
+    # Print full un-truncated evidence for failed checks
+    failed = [c for c in checks if not c["passed"]]
+    if failed:
+        print(f"\n{BOLD}{RED}Diagnostic Failure Breakdown ({len(failed)} failed check(s)):{RESET}")
+        for fc in failed:
+            print(f"  • {BOLD}[{fc['id']}] {fc.get('name')}{RESET}")
+            print(f"    {YELLOW}Reason:{RESET} {fc.get('reason')}")
+            if fc.get("evidence"):
+                print(f"    {CYAN}Evidence Quote:{RESET} \"{fc.get('evidence')}\"")
+            if fc.get("fix_suggestion"):
+                print(f"    {GREEN}Fix Suggestion:{RESET} {fc.get('fix_suggestion')}")
+        print()
 
 
 def main():
@@ -346,9 +424,13 @@ def main():
         for cid, count in stats.get("check_failures", {}).items():
             print(f"  - Check {cid:<5}: {count} failure(s)")
 
-        print(f"\n{BOLD}Active Learned Generator Rules ({len(rules)}):{RESET}")
+        print(f"\n{BOLD}Learned Generator Rules ({len(rules)}):{RESET}")
         for r in rules:
-            print(f"  [{r.get('id')}] (from {r.get('created_from_check')}): {r.get('rule_text')}")
+            status_tag = f"{GREEN}[APPROVED]{RESET}" if r.get("approved", True) else f"{RED}[REJECTED BY HUMAN REVIEW]{RESET}"
+            print(f"  [{r.get('id')}] (from {r.get('created_from_check')}) {status_tag}:")
+            print(f"    \"{r.get('rule_text')}\"")
+            if not r.get("approved", True) and r.get("rejection_reason"):
+                print(f"    {YELLOW}Human Review Note:{RESET} {r.get('rejection_reason')}")
 
         print(f"\n{BOLD}Proposed Rubric Changes Quarantined for Human Review ({len(proposals)}):{RESET}")
         for p in proposals:
@@ -423,3 +505,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

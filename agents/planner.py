@@ -69,3 +69,4 @@ Produce the complete JSON lesson specification following the schema instructions
 
         logger.info(f"Lesson plan generated successfully with {len(spec.get('must_cover_concepts', []))} key concepts.")
         return spec
+

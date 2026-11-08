@@ -42,15 +42,17 @@ def atomic_read_json(file_path: str, default: Any) -> Any:
 
 
 class ReflectorAgent:
-    def __init__(self, failure_threshold: int = 3, llm_client=None):
-        self.failure_threshold = failure_threshold
+    def __init__(self, failure_threshold: Optional[int] = None, llm_client=None):
+        env_threshold = int(os.getenv("FAILURE_THRESHOLD", "2"))
+        self.failure_threshold = failure_threshold if failure_threshold is not None else env_threshold
         self.llm = llm_client or get_llm_client()
 
     def record_run(
         self,
         attempts: int,
         passed: bool,
-        all_failed_check_ids: List[str]
+        all_failed_check_ids: List[str],
+        source: str = "generator"
     ) -> Dict[str, Any]:
         """
         Updates persistent memory stats after a run completes.
@@ -81,8 +83,9 @@ class ReflectorAgent:
         atomic_write_json(FAILURE_STATS_PATH, stats)
         logger.info(f"Recorded run in memory: Run #{stats['total_runs']}, Status={'PASS' if passed else 'REVIEW'}")
 
-        # Check if any failure crossed the threshold for auto-learning
-        self._check_and_synthesize_rules(check_failures)
+        # Check if any failure crossed the threshold for auto-learning (strictly for generator errors)
+        if source == "generator":
+            self._check_and_synthesize_rules(check_failures)
         return stats
 
     def _check_and_synthesize_rules(self, check_failures: Dict[str, int]):
@@ -103,15 +106,32 @@ class ReflectorAgent:
     def _propose_rule_for_check(self, check_id: str, count: int, existing_rules: List[Dict[str, Any]]):
         """
         Queries the LLM for a single concise rule to prevent this check failure in future generations.
+        Injects the check's exact name and pass criteria to guarantee concrete, actionable rules.
         """
+        # Load rubric details for the failing check
+        from checks.code_checks import load_yaml
+        rubric_path = os.path.join(os.path.dirname(__file__), "..", "rubric", "rubric.yaml")
+        rubric_data = load_yaml(rubric_path)
+        check_def = next((c for c in rubric_data.get("checks", []) if c.get("id") == check_id), {})
+        check_name = check_def.get("name", check_id)
+        pass_criteria = check_def.get("pass_criteria", "")
+
         prompt = f"""
-The lesson generator has failed rubric check '{check_id}' {count} times across previous runs.
-Propose ONE concise, actionable generator rule (maximum 25 words) that instructs the lesson generator
-how to strictly avoid failing check '{check_id}' in future drafts.
+The lesson generator has failed rubric check '{check_id}' ({check_name}) {count} times across previous runs.
+
+CHECK CRITERIA:
+\"\"\"
+{pass_criteria}
+\"\"\"
+
+TASK:
+Propose ONE concrete, actionable generator rule (strictly under 25 words).
+The rule must directly instruct the generator how to fulfill the exact check criteria above.
+Reject vague educational advice. Make it imperative, concrete, and measurable.
 
 Return valid JSON with:
 {{
-  "rule_proposal": "Concise imperative instruction for generator",
+  "rule_proposal": "Concrete imperative instruction for generator",
   "target_check": "{check_id}",
   "rubric_feedback": null
 }}
@@ -165,3 +185,4 @@ Return valid JSON with:
         logger.warning(
             f"GUARDRAIL: Proposed rubric change for {check_id} quarantined in memory for human review: {proposal}"
         )
+
