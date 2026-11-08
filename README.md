@@ -139,7 +139,8 @@ rag-lesson-agent/
 ├── knowledge/
 │   └── rag_facts.md                    # Canonical grounding fact sheet (strict facts)
 ├── rubric/
-│   └── rubric.yaml                     # Rubric as data (16 hard pass/fail checkpoints)
+│   ├── rubric.yaml                     # Rubric as data (16 hard pass/fail checkpoints)
+│   └── CHANGELOG.md                    # Human guardrail changelog for rubric evolution
 ├── checks/
 │   └── code_checks.py                  # Deterministic code checks (B1, B2, B3a, D1, E2a)
 ├── agents/
@@ -162,6 +163,8 @@ rag-lesson-agent/
 │   │   ├── factual_error.md            # Claims RAG retrains model weights (fails A2)
 │   │   ├── jargon_dump.md              # Unexplained cosine similarity (fails B3a/B3b)
 │   │   ├── bad_flow.md                 # Example before definition (fails E1)
+│   │   ├── wrong_pipeline_order.md     # Pipeline order inverted (fails D2/E1)
+│   │   ├── overclaim.md                # Claims RAG eliminates hallucinations 100% (fails A2)
 │   │   └── rag_is_images_only.md       # Custom error: claims RAG is photos only (fails A1/A2)
 │   ├── test_code_checks.py             # Unit tests for deterministic checks
 │   ├── test_evaluator_catches_errors.py# Asserts evaluator catches deliberate flaws
