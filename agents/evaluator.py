@@ -182,3 +182,4 @@ Return valid JSON according to your system instructions.
             f"Evaluation complete. Passed: {overall_passed} ({result['passed_count']}/{result['total_checks']} passed)."
         )
         return result
+

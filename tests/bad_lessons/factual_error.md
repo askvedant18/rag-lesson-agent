@@ -48,3 +48,4 @@ RAG searches external notes and retrains model weights to answer queries accurat
 1. What does RAG stand for?
 2. Does RAG search external documents?
 3. What is a chunk?
+

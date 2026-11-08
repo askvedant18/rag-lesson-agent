@@ -50,3 +50,4 @@ RAG operates in two main phases:
 - *Misconception*: "RAG retrains the AI model during search." -> **False**: Weights are never modified.
 - *Misconception*: "RAG eliminates 100% of hallucinations." -> **False**: It dramatically reduces hallucinations, but does not completely eliminate them.
 - *Misconception*: "Vector search matches exact keywords." -> **False**: Vector search compares mathematical semantic meanings, not just exact keyword matches.
+

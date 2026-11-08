@@ -51,19 +51,38 @@ async def serve_index():
     return FileResponse(index_file, media_type="text/html")
 
 
+@app.get("/api/config")
+async def get_system_config():
+    """Returns current active model configuration and whether mock mode is running."""
+    from llm import get_llm_client, DEFAULT_GENERATOR_MODEL, DEFAULT_JUDGE_MODEL
+    client = get_llm_client()
+    is_live = bool(client.client)
+    return {
+        "is_mock": not is_live,
+        "mode": "LIVE_GEMINI" if is_live else "OFFLINE_MOCK",
+        "generator_model": DEFAULT_GENERATOR_MODEL,
+        "judge_model": DEFAULT_JUDGE_MODEL
+    }
+
+
 @app.get("/api/csrf")
-async def get_csrf_token(response: Response):
+async def get_csrf_token(request: Request, response: Response):
     """
-    Issues a cryptographically secure CSRF token.
-    Sets double-submit cookie with SameSite=Strict.
+    Issues or returns the cryptographically secure CSRF token.
+    Reuses existing cookie if valid to prevent token desynchronization.
     """
+    existing = request.cookies.get("csrf_token")
+    if existing and len(existing) >= 32:
+        return {"csrf_token": existing}
+
     token = generate_csrf_token()
     response.set_cookie(
         key="csrf_token",
         value=token,
-        httponly=False,  # Needs to be read by client to set X-CSRF-Token header
-        samesite="strict",
-        secure=False     # Set to True on production HTTPS
+        httponly=False,  # Needs to be readable by client to set X-CSRF-Token header
+        samesite="lax",  # Reliable on localhost and standard browser navigation
+        secure=False,    # Set to True on production HTTPS
+        path="/"
     )
     return {"csrf_token": token}
 
@@ -241,3 +260,4 @@ async def get_final_lesson():
 
 # Mount static assets directory
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+

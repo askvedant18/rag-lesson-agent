@@ -127,7 +127,41 @@ We saw the worked example first and finished with the definition.
 ### Questions
 1. What was the sample question about?
 2. What does RAG stand for?
-3. Which step converts chunks into vectors?`
+3. Which step converts chunks into vectors?`,
+
+  wrong_pipeline: `# Introduction to RAG
+
+## 1. What is RAG?
+RAG stands for Retrieval-Augmented Generation. It helps Large Language Models (LLMs) answer questions. An LLM is a machine learning model.
+
+## 2. Why Does RAG Matter?
+RAG prevents hallucination. Hallucination means the model makes up fake facts. It also gives fresh knowledge.
+
+## 3. How Does RAG Work?
+Here is how the RAG pipeline works:
+
+\`\`\`
+[ User Asks Question ] ➡️ 1. Chunk Documents ➡️ 2. Embed ➡️ 3. Retrieve ➡️ 4. Generate
+\`\`\`
+
+Every time you type a question, the AI takes your company documents and cuts them into chunks. Then it embeds them into vectors and searches them. It never does anything until you ask a question. The user question is never embedded, only the documents are converted to numbers.
+
+## 4. Worked Step-by-Step Example
+User Question: What is the fee?
+Retrieved text: Late fee is 50.
+Final Answer: The late fee is 50.
+
+## 5. Limitations
+RAG can be slow. It can also make mistakes if the documents are bad.
+
+## 6. Hinglish Glossary
+- RAG: Document search system.
+
+## 7. Recap and Quick Check
+RAG searches documents.
+1. What does RAG stand for?
+2. True or False: RAG changes model weights.
+3. How many steps are in RAG?`
 };
 
 // Rubric Check Metadata Definitions (16 Checkpoints)
@@ -188,15 +222,42 @@ function updateThemeIcon(theme) {
 // -----------------------------------------------------------------------------
 // CSRF Management
 // -----------------------------------------------------------------------------
+function getCsrfToken() {
+  const match = document.cookie.match(/(?:^|; )\s*csrf_token=([^;]+)/);
+  if (match) {
+    return decodeURIComponent(match[1]);
+  }
+  return csrfToken;
+}
+
 async function setupCSRF() {
   try {
-    const res = await fetch("/api/csrf");
+    const res = await fetch("/api/csrf", { credentials: "same-origin" });
     if (res.ok) {
       const data = await res.json();
       csrfToken = data.csrf_token;
     }
+
+    // Check system LLM mode (Live vs Mock)
+    const confRes = await fetch("/api/config", { credentials: "same-origin" });
+    if (confRes.ok) {
+      const conf = await confRes.json();
+      const badge = document.getElementById("llmModeText");
+      const banner = document.getElementById("mockModeBanner");
+      if (conf.is_mock) {
+        badge.textContent = "OFFLINE MOCK MODE";
+        badge.style.color = "var(--accent-amber)";
+        badge.style.borderColor = "var(--accent-amber)";
+        if (banner) banner.style.display = "flex";
+      } else {
+        badge.textContent = `LIVE GEMINI (${conf.generator_model})`;
+        badge.style.color = "var(--accent-primary)";
+        badge.style.borderColor = "var(--accent-primary)";
+        if (banner) banner.style.display = "none";
+      }
+    }
   } catch (err) {
-    console.warn("Failed to obtain CSRF token:", err);
+    console.warn("Failed to obtain CSRF token or config:", err);
   }
 }
 
@@ -280,6 +341,11 @@ function setupEventHandlers() {
     showToast("Loaded Bad Flow sample lesson (example before definition).");
   });
 
+  document.getElementById("loadWrongPipelineBtn").addEventListener("click", () => {
+    document.getElementById("labTextarea").value = SAMPLE_LESSONS.wrong_pipeline;
+    showToast("Loaded Inverted Pipeline sample lesson (chunking after query).");
+  });
+
   document.getElementById("runLabEvaluateBtn").addEventListener("click", async () => {
     const text = document.getElementById("labTextarea").value.trim();
     if (!text) {
@@ -299,6 +365,7 @@ function setupEventHandlers() {
     let key = "factual_error";
     if (text.includes("cosine similarity")) key = "jargon_dump";
     if (text.includes("Worked Example Before")) key = "bad_flow";
+    if (text.includes("takes your company documents and cuts them into chunks") || text.includes("User Asks Question")) key = "wrong_pipeline_order";
     startGenerationRun("Introduction to RAG", key);
   });
 
@@ -363,14 +430,31 @@ async function startGenerationRun(topic, sampleKey = null) {
   renderAttemptsTabs();
 
   try {
-    const res = await fetch("/api/run", {
+    let token = getCsrfToken() || csrfToken;
+    let res = await fetch("/api/run", {
       method: "POST",
+      credentials: "same-origin",
       headers: {
         "Content-Type": "application/json",
-        "X-CSRF-Token": csrfToken
+        "X-CSRF-Token": token
       },
       body: JSON.stringify({ topic, sample_key: sampleKey })
     });
+
+    if (res.status === 403) {
+      // Re-synchronize CSRF token once and retry
+      await setupCSRF();
+      token = getCsrfToken() || csrfToken;
+      res = await fetch("/api/run", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRF-Token": token
+        },
+        body: JSON.stringify({ topic, sample_key: sampleKey })
+      });
+    }
 
     if (!res.ok) {
       const err = await res.json();
@@ -466,14 +550,30 @@ async function evaluateLessonLive(lessonText) {
   setSystemStatus("Evaluating", true);
 
   try {
-    const res = await fetch("/api/evaluate", {
+    let token = getCsrfToken() || csrfToken;
+    let res = await fetch("/api/evaluate", {
       method: "POST",
+      credentials: "same-origin",
       headers: {
         "Content-Type": "application/json",
-        "X-CSRF-Token": csrfToken
+        "X-CSRF-Token": token
       },
       body: JSON.stringify({ lesson_text: lessonText })
     });
+
+    if (res.status === 403) {
+      await setupCSRF();
+      token = getCsrfToken() || csrfToken;
+      res = await fetch("/api/evaluate", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRF-Token": token
+        },
+        body: JSON.stringify({ lesson_text: lessonText })
+      });
+    }
 
     if (!res.ok) {
       const err = await res.json();
@@ -946,3 +1046,4 @@ function escapeHTML(str) {
     '"': '&quot;'
   }[tag] || tag));
 }
+
