@@ -68,14 +68,14 @@ Sometimes the search system misses the correct text chunk entirely.
 Searching external notes takes extra time, making responses slightly slower.
 Also, the AI can still misread notes and make mistakes or hallucinate.
 
-## 7. Hinglish Glossary
+## 7. Simple Glossary
 
-- **RAG**: Notes search karke answer likhne ka tareeka.
-- **LLM**: Ek smart AI model jo text samajhta hai.
-- **Chunk**: Kisi bade document ka chhota tukda.
-- **Embedding**: Text ko numbers me convert karna.
-- **Vector Database**: Numbers data store karne wala database.
-- **Hallucination**: AI ka galat answer confidently bolna.
+- **RAG**: A method where the AI searches external notes to write an accurate answer.
+- **LLM**: A smart computer program that understands and generates human text.
+- **Chunk**: A smaller piece of text cut from a larger document.
+- **Embedding**: Converting text meaning into a list of numbers.
+- **Vector Database**: A storage system built specifically for number lists.
+- **Hallucination**: When an AI states incorrect facts with false confidence.
 
 ## 8. Recap and Quick Check
 
@@ -96,3 +96,4 @@ RAG reduces hallucinations without changing model weights.
 2. False. RAG does NOT change the AI model's weights.
 3. Chunking happens before a user asks a question, during the Preparation phase.
 </details>
+
