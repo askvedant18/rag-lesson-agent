@@ -954,13 +954,23 @@ function renderActiveRules(rules) {
     return;
   }
 
+  // Same status rules as agents/reflector.py rule_status(): only approved rules reach the generator.
+  const ruleStatusLabel = r => {
+    const status = r.status
+      || (r.rejection_reason ? "rejected" : ("approved" in r ? (r.approved ? "approved" : "pending_human_review") : "approved"));
+    if (status === "approved") return { text: "Active & Injected", color: "var(--accent-primary)" };
+    if (status === "rejected") return { text: "Rejected by Human Review", color: "var(--status-fail)" };
+    return { text: "Pending Human Review", color: "var(--text-muted)" };
+  };
+
   let html = "";
   rules.forEach(r => {
+    const label = ruleStatusLabel(r);
     html += `
       <div style="background:var(--bg-surface-elevated); border:1px solid var(--border-subtle); border-radius:var(--radius-sm); padding:0.8rem; margin-bottom:0.6rem;">
         <div style="display:flex; justify-content:space-between; margin-bottom:0.3rem;">
           <span class="badge">[${escapeHTML(r.id)}] From Check ${escapeHTML(r.created_from_check || 'System')}</span>
-          <span style="font-size:0.75rem; color:var(--accent-primary);">Active & Injected</span>
+          <span style="font-size:0.75rem; color:${label.color};">${escapeHTML(label.text)}</span>
         </div>
         <p style="font-size:0.88rem; font-weight:500;">${escapeHTML(r.rule_text)}</p>
       </div>

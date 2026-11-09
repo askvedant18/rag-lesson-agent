@@ -41,6 +41,48 @@ def atomic_read_json(file_path: str, default: Any) -> Any:
         return default
 
 
+RULE_APPROVED = "approved"
+RULE_PENDING = "pending_human_review"
+RULE_REJECTED = "rejected"
+
+
+def rule_status(rule: Dict[str, Any]) -> str:
+    """
+    Returns the human-review status of a learned rule: approved, pending_human_review or rejected.
+    Rules saved before the status field existed are read from their `approved` flag and
+    `rejection_reason`, so RULE-001 (approved: false + rejection_reason) stays rejected.
+    """
+    status = rule.get("status")
+    if status in (RULE_APPROVED, RULE_PENDING, RULE_REJECTED):
+        return status
+    if rule.get("rejection_reason"):
+        return RULE_REJECTED
+    if "approved" in rule:
+        return RULE_APPROVED if rule["approved"] else RULE_PENDING
+    return RULE_APPROVED
+
+
+def set_rule_status(rule_id: str, approve: bool, reason: str = "") -> Dict[str, Any]:
+    """
+    Records a human decision on a learned rule. Only approved rules are injected into the
+    generator prompt. Raises ValueError for an unknown rule id.
+    """
+    rules = atomic_read_json(LEARNED_RULES_PATH, [])
+    rule = next((r for r in rules if r.get("id") == rule_id), None)
+    if rule is None:
+        raise ValueError(f"No learned rule with id {rule_id}")
+
+    rule["status"] = RULE_APPROVED if approve else RULE_REJECTED
+    rule["approved"] = approve
+    rule["reviewed_at"] = datetime.now(timezone.utc).isoformat()
+    if approve:
+        rule.pop("rejection_reason", None)
+    else:
+        rule["rejection_reason"] = reason or "Rejected during human review."
+    atomic_write_json(LEARNED_RULES_PATH, rules)
+    return rule
+
+
 class ReflectorAgent:
     def __init__(self, failure_threshold: Optional[int] = None, llm_client=None):
         env_threshold = int(os.getenv("FAILURE_THRESHOLD", "2"))
@@ -75,25 +117,41 @@ class ReflectorAgent:
         history.append(attempts)
         stats["attempts_history"] = history[-100:]  # Keep last 100
 
+        # All failures (generator drafts + injected demo lessons), shown in --stats and the UI.
         check_failures = stats.get("check_failures", {})
         for cid in all_failed_check_ids:
             check_failures[cid] = check_failures.get(cid, 0) + 1
         stats["check_failures"] = check_failures
 
+        # Failures from the generator's own drafts only. Injected demo lessons must never
+        # push a check over the threshold, or a demo would create rules for mistakes the
+        # generator never made.
+        generator_failures = stats.get("generator_check_failures", {})
+        if source == "generator":
+            for cid in all_failed_check_ids:
+                generator_failures[cid] = generator_failures.get(cid, 0) + 1
+        stats["generator_check_failures"] = generator_failures
+
         atomic_write_json(FAILURE_STATS_PATH, stats)
         logger.info(f"Recorded run in memory: Run #{stats['total_runs']}, Status={'PASS' if passed else 'REVIEW'}")
 
-        # Check if any failure crossed the threshold for auto-learning (strictly for generator errors)
+        # Check if any generator failure crossed the threshold for auto-learning
         if source == "generator":
-            self._check_and_synthesize_rules(check_failures)
+            self._check_and_synthesize_rules(generator_failures)
         return stats
 
     def _check_and_synthesize_rules(self, check_failures: Dict[str, int]):
         """
-        Analyzes check failure counts and proposes targeted rules for frequent failures.
+        Analyzes generator failure counts and proposes targeted rules for frequent failures.
+        A check gets a new proposal only when it has no approved or pending rule; a rejected
+        rule does not block a better proposal later.
         """
         learned_rules = atomic_read_json(LEARNED_RULES_PATH, [])
-        existing_rule_sources = {r.get("created_from_check") for r in learned_rules if "created_from_check" in r}
+        existing_rule_sources = {
+            r.get("created_from_check")
+            for r in learned_rules
+            if "created_from_check" in r and rule_status(r) != RULE_REJECTED
+        }
 
         for check_id, count in check_failures.items():
             if count >= self.failure_threshold and check_id not in existing_rule_sources:
@@ -109,7 +167,7 @@ class ReflectorAgent:
         Injects the check's exact name and pass criteria to guarantee concrete, actionable rules.
         """
         # Load rubric details for the failing check
-        from checks.code_checks import load_yaml
+        from agents.evaluator import load_yaml
         rubric_path = os.path.join(os.path.dirname(__file__), "..", "rubric", "rubric.yaml")
         rubric_data = load_yaml(rubric_path)
         check_def = next((c for c in rubric_data.get("checks", []) if c.get("id") == check_id), {})
@@ -150,11 +208,13 @@ Return valid JSON with:
                 "created_from_check": check_id,
                 "created_at": datetime.now(timezone.utc).isoformat(),
                 "times_used": 0,
-                "approved": True
+                # Not used by the generator until a human approves it (python main.py --approve-rule <id>).
+                "approved": False,
+                "status": RULE_PENDING
             }
             existing_rules.append(new_rule)
             atomic_write_json(LEARNED_RULES_PATH, existing_rules)
-            logger.info(f"Adopted new learned rule: [{new_rule['id']}] {new_rule['rule_text']}")
+            logger.info(f"Proposed new learned rule for human review: [{new_rule['id']}] {new_rule['rule_text']}")
 
         # IMPORTANT GUARDRAIL: Rubric feedback is strictly logged for human review only.
         rubric_feedback = response.get("rubric_feedback")

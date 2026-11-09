@@ -9,7 +9,7 @@ import re
 import json
 import time
 import logging
-from typing import Any, Dict, Optional, Type
+from typing import Any, Dict, List, Optional, Type
 from dotenv import load_dotenv
 from pydantic import BaseModel
 

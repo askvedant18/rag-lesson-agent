@@ -9,6 +9,7 @@ import os
 import sys
 import json
 import uuid
+import logging
 import argparse
 from datetime import datetime, timezone
 from typing import Dict, Any, List, Optional, Generator
@@ -17,8 +18,16 @@ from typing import Dict, Any, List, Optional, Generator
 from agents.planner import PlannerAgent
 from agents.generator import GeneratorAgent
 from agents.evaluator import EvaluatorAgent
-from agents.reflector import ReflectorAgent, atomic_write_json, atomic_read_json
+from agents.reflector import (
+    ReflectorAgent,
+    atomic_write_json,
+    atomic_read_json,
+    rule_status,
+    set_rule_status,
+)
 from llm import get_llm_client
+
+logger = logging.getLogger("rag_lesson_agent.main")
 
 OUTPUT_DIR = os.path.join(os.path.dirname(__file__), "output")
 FINAL_LESSON_PATH = os.path.join(OUTPUT_DIR, "final_lesson.md")
@@ -393,8 +402,23 @@ def main():
     parser.add_argument("--evaluate-only", type=str, help="Evaluate a markdown lesson file directly without running generation")
     parser.add_argument("--stats", action="store_true", help="Print cumulative failure memory stats and exit")
     parser.add_argument("--serve", action="store_true", help="Start the FastAPI web interface with SSE stream")
+    parser.add_argument("--approve-rule", type=str, metavar="RULE_ID", help="Approve a pending learned rule so the generator uses it")
+    parser.add_argument("--reject-rule", type=str, metavar="RULE_ID", help="Reject a learned rule so the generator never uses it")
+    parser.add_argument("--reason", type=str, default="", help="Reason recorded with --reject-rule")
 
     args = parser.parse_args()
+
+    # Mode 0: Human review of learned rules
+    if args.approve_rule or args.reject_rule:
+        rule_id = args.approve_rule or args.reject_rule
+        try:
+            rule = set_rule_status(rule_id, approve=bool(args.approve_rule), reason=args.reason)
+        except ValueError as e:
+            print(f"{RED}Error: {e}{RESET}")
+            sys.exit(1)
+        label = f"{GREEN}APPROVED{RESET}" if rule["approved"] else f"{RED}REJECTED{RESET}"
+        print(f"[{rule['id']}] {label}: \"{rule.get('rule_text')}\"")
+        return
 
     # Mode 1: Serve Web App
     if args.serve:
@@ -420,17 +444,25 @@ def main():
         print(f"Successful Ships:    {stats.get('successful_runs', 0)}")
         print(f"Human Review Flags:  {stats.get('human_review_runs', 0)}")
         print(f"Attempts History:    {stats.get('attempts_history', [])[-10:]}")
-        print(f"\n{BOLD}Check Failure Distribution:{RESET}")
+        generator_failures = stats.get("generator_check_failures", {})
+        print(f"\n{BOLD}Check Failure Distribution (all runs / generator drafts only):{RESET}")
         for cid, count in stats.get("check_failures", {}).items():
-            print(f"  - Check {cid:<5}: {count} failure(s)")
+            print(f"  - Check {cid:<5}: {count} failure(s) / {generator_failures.get(cid, 0)} from generator")
 
+        status_tags = {
+            "approved": f"{GREEN}[APPROVED]{RESET}",
+            "pending_human_review": f"{YELLOW}[PENDING HUMAN REVIEW]{RESET}",
+            "rejected": f"{RED}[REJECTED BY HUMAN REVIEW]{RESET}",
+        }
         print(f"\n{BOLD}Learned Generator Rules ({len(rules)}):{RESET}")
         for r in rules:
-            status_tag = f"{GREEN}[APPROVED]{RESET}" if r.get("approved", True) else f"{RED}[REJECTED BY HUMAN REVIEW]{RESET}"
-            print(f"  [{r.get('id')}] (from {r.get('created_from_check')}) {status_tag}:")
+            status = rule_status(r)
+            print(f"  [{r.get('id')}] (from {r.get('created_from_check')}) {status_tags[status]}:")
             print(f"    \"{r.get('rule_text')}\"")
-            if not r.get("approved", True) and r.get("rejection_reason"):
+            if status == "rejected" and r.get("rejection_reason"):
                 print(f"    {YELLOW}Human Review Note:{RESET} {r.get('rejection_reason')}")
+            if status == "pending_human_review":
+                print(f"    Approve: python main.py --approve-rule {r.get('id')} | Reject: python main.py --reject-rule {r.get('id')} --reason \"...\"")
 
         print(f"\n{BOLD}Proposed Rubric Changes Quarantined for Human Review ({len(proposals)}):{RESET}")
         for p in proposals:

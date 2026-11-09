@@ -10,6 +10,7 @@ import json
 import logging
 from typing import Dict, Any, List, Optional
 from llm import get_llm_client
+from agents.reflector import rule_status, RULE_APPROVED
 
 logger = logging.getLogger("rag_lesson_agent.generator")
 
@@ -47,7 +48,7 @@ class GeneratorAgent:
         If rules exist that aren't baked into base v1, updates or logs prompt version.
         """
         rules = load_learned_rules()
-        active_rules = [r for r in rules if r.get("approved", True)]
+        active_rules = [r for r in rules if rule_status(r) == RULE_APPROVED]
         if len(active_rules) > 0:
             self.prompt_version = f"generator_v{1 + (len(active_rules) // 3)}"
             # Ensure versioned prompt file exists
@@ -76,7 +77,7 @@ class GeneratorAgent:
         self._ensure_prompt_version()
 
         rules = load_learned_rules()
-        active_rules = [r for r in rules if r.get("approved", True)]
+        active_rules = [r for r in rules if rule_status(r) == RULE_APPROVED]
         rules_text = "\n".join(f"- {r.get('rule_text')}" for r in active_rules) if active_rules else "None yet."
 
         base_system_prompt = load_file_content(os.path.join(PROMPTS_DIR, "generator_v1.md"))

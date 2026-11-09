@@ -3,7 +3,7 @@
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-green.svg)](https://fastapi.tiangolo.com/)
 [![Google GenAI](https://img.shields.io/badge/Google_GenAI-Official_SDK-orange.svg)](https://ai.google.dev/)
-[![Tests Passing](https://img.shields.io/badge/pytest-27%2F27%20passed-brightgreen.svg)]()
+[![Tests Passing](https://img.shields.io/badge/pytest-34%2F34%20passed-brightgreen.svg)]()
 
 An agentic, self-evaluating lesson generator designed for the **GenAI Engineer - Content Systems** role. The system plans, drafts, rigorously evaluates, and autonomously regenerates educational content for 12th-grade graduates from India with zero AI background and non-English-medium schooling. It operates an explicit **Generate → Evaluate → Regenerate** state machine loop with hard PASS/FAIL checkpoints and memory-driven self-evolution.
 
@@ -100,6 +100,8 @@ python main.py --topic "Introduction to RAG"
 | `python main.py --inject-bad tests/bad_lessons/factual_error.md` | **Loom Demo Flag**: Injects a bad lesson on Attempt 1, shows evaluator rejecting it with evidence, and generator self-correcting on retry. |
 | `python main.py --evaluate-only <path_to_markdown>` | Evaluates any lesson file directly against the 16 rubric checks. |
 | `python main.py --stats` | Displays cumulative memory failure counts, synthesized rules, and quarantined proposals. |
+| `python main.py --approve-rule RULE-002` | Approves a pending learned rule so the generator starts using it. |
+| `python main.py --reject-rule RULE-002 --reason "..."` | Rejects a learned rule; the generator never uses it. |
 | `python main.py --serve` | Launches the modern FastAPI web interface on `http://127.0.0.1:8000`. |
 
 ---
@@ -169,6 +171,7 @@ rag-lesson-agent/
 │   ├── test_code_checks.py             # Unit tests for deterministic checks
 │   ├── test_evaluator_catches_errors.py# Asserts evaluator catches deliberate flaws
 │   ├── test_generator_feedback.py      # Verifies retry passes failure feedback
+│   ├── test_reflector_memory.py        # Demo failures never create rules; rules need human approval
 │   └── test_security.py                # Tests CSRF, XSS, headers, path traversal, injection
 ├── web/
 │   ├── app.py                          # FastAPI SSE endpoints & static mount
@@ -208,7 +211,7 @@ Endless retry loops waste tokens, increase latency, and can spiral into degraded
 Rubric checkpoints live in an external YAML file, decoupled from application logic. Every human modification is formally logged in `rubric/CHANGELOG.md` with timestamps and pedagogical rationales.
 
 **6. Asymmetric self-evolution guardrail (Generator vs Rubric)**  
-The Reflector agent (`agents/reflector.py`) can synthesize new generator rules after repeated failures, but is **strictly prohibited from altering the evaluation rubric or judge prompts**. An autonomous agent that can lower its own examination bar would inevitably reward-hack. Rubric change suggestions are quarantined in `memory/proposed_rubric_changes.json` for human authorization. All learned rules also carry an `approved` flag for human governance (`RULE-001` was rejected as too vague).
+The Reflector agent (`agents/reflector.py`) can synthesize new generator rules after repeated failures, but is **strictly prohibited from altering the evaluation rubric or judge prompts**. An autonomous agent that can lower its own examination bar would inevitably reward-hack. Rubric change suggestions are quarantined in `memory/proposed_rubric_changes.json` for human authorization. A new learned rule starts as `pending_human_review` and reaches the generator only after a human approves it (`--approve-rule`); `RULE-001` was rejected as too vague. Rules are synthesized only from the generator's own failures (`generator_check_failures`), never from injected demo lessons.
 
 **7. Targeted, surgical retry feedback**  
 On retry, the generator does not receive generic critique; it receives only the specific failed check IDs, reasons, exact quotes, and fix suggestions. It is instructed to preserve passing sections and rewrite only the failing regions.
@@ -229,7 +232,7 @@ Untrusted LLM outputs are rendered via marked.js and strictly sanitized with DOM
 > **Note on evaluation logs:**
 > - Check **E2a** failed initially due to a regex limitation in my own Python checker (it required a `?` on every quiz line, missing True/False statements). Once the checker was fixed, Run 3 passed on Attempt 1.
 > - The failures on **A2, B3a, D2, and E1** in `memory/failure_stats.json` come from my injected test lessons (`--inject-bad`), not from the generator drafting.
-> - **Auto-learned rules:** The Reflector agent is implemented and tested, but no auto-learned rule is currently active (`RULE-001` was rejected during human review as too vague).
+> - **Auto-learned rules:** The Reflector agent is implemented and tested, but no auto-learned rule is currently active (`RULE-001` was rejected during human review as too vague). New rules wait for human approval before the generator uses them.
 
 ---
 
@@ -247,6 +250,21 @@ Untrusted LLM outputs are rendered via marked.js and strictly sanitized with DOM
 - **Symptom:** The judge passed a lesson that showed the wrong pipeline order (question first, then chunking and embedding).  
   **Root Cause:** Check `D2` only checked that the four terms appeared, not the execution order of the two phases.  
   **Fix:** Updated `D2` and `E1` pass criteria in `rubric/rubric.yaml` (human change, logged in `rubric/CHANGELOG.md`), added `tests/bad_lessons/wrong_pipeline_order.md`, and added an automated regression test.
+- **Symptom:** Every injected demo run (`--inject-bad`) added its failures to `memory/failure_stats.json`, so `A2`, `B3a`, `D2` and `E1` reached 3 failures each although the generator never failed them.  
+  **Root Cause:** The Reflector kept one shared failure count and used it for rule synthesis, so the next normal run would have created rules for mistakes that only the demo lessons made.  
+  **Fix:** Added a separate `generator_check_failures` count that only the generator's own drafts update. Rules are synthesized from that count only; `--stats` shows both.
+- **Symptom:** A newly synthesized rule was injected into the generator prompt straight away.  
+  **Root Cause:** The Reflector saved new rules with `"approved": true`, and a rejected rule blocked any later proposal for the same check.  
+  **Fix:** New rules now start as `pending_human_review` and reach the generator only after `python main.py --approve-rule <id>` (or are dropped with `--reject-rule <id> --reason "..."`). A rejected rule no longer blocks a better proposal. The web dashboard now shows each rule's real status instead of "Active & Injected" for every rule.
+- **Symptom:** Rule synthesis crashed with `ImportError` as soon as a check crossed the failure threshold, after the lesson had already shipped.  
+  **Root Cause:** `agents/reflector.py` imported `load_yaml` from `checks/code_checks.py`, but that function lives in `agents/evaluator.py`.  
+  **Fix:** Import `load_yaml` from `agents/evaluator.py`; covered by `tests/test_reflector_memory.py`.
+- **Symptom:** The pipeline would crash with `NameError` when a retry returned exactly the same lesson.  
+  **Root Cause:** `main.py` called `logger.warning(...)` on the no-progress path without defining `logger`.  
+  **Fix:** Defined a module logger in `main.py`.
+- **Symptom:** `import llm` fails on Python 3.12 and 3.13 (the README's tested version), although it works on Python 3.14+.  
+  **Root Cause:** `llm.py` used `List[str]` in a type hint without importing `List`; Python 3.14+ evaluates annotations lazily, so the error stayed hidden there.  
+  **Fix:** Added `List` to the `typing` import.
 
 ---
 
@@ -264,7 +282,7 @@ The test suite includes 5 deliberately flawed lessons in `tests/bad_lessons/`:
 
 ## Running the Automated Test Suite
 
-Run all 27 unit, evaluator, and security tests hermetically:
+Run all 34 unit, evaluator, reflector, and security tests hermetically:
 
 ```bash
 python -m pytest -v
@@ -290,6 +308,13 @@ tests/test_evaluator_catches_errors.py::test_overclaim_fails_a2 PASSED
 tests/test_evaluator_catches_errors.py::test_passing_lesson_clears_all_rubric_checks PASSED
 tests/test_evaluator_catches_errors.py::test_judge_hallucinated_quote_flagged PASSED
 tests/test_generator_feedback.py::test_generator_receives_failed_check_reasons_and_evidence PASSED
+tests/test_reflector_memory.py::test_injected_failures_never_create_rules PASSED
+tests/test_reflector_memory.py::test_generator_failures_create_a_pending_rule PASSED
+tests/test_reflector_memory.py::test_generator_uses_only_approved_rules PASSED
+tests/test_reflector_memory.py::test_reject_records_reason_and_unknown_id_fails PASSED
+tests/test_reflector_memory.py::test_rejected_rule_does_not_block_a_new_proposal PASSED
+tests/test_reflector_memory.py::test_legacy_rules_keep_their_meaning PASSED
+tests/test_reflector_memory.py::test_main_module_defines_logger PASSED
 tests/test_security.py::test_csrf_rejection_without_token PASSED
 tests/test_security.py::test_csrf_success_with_valid_token PASSED
 tests/test_security.py::test_xss_payload_sanitization PASSED
@@ -300,7 +325,7 @@ tests/test_security.py::test_cache_control_on_api_responses PASSED
 tests/test_security.py::test_prompt_injection_defense PASSED
 tests/test_security.py::test_secrets_redaction PASSED
 
-======================= 27 passed in 1.76s =======================
+======================= 34 passed in 1.33s =======================
 ```
 
 ---
@@ -315,5 +340,5 @@ tests/test_security.py::test_secrets_redaction PASSED
 ### Future Work
 - **Multi-Lingual Glossaries**: Add Hindi, Tamil, and Telugu glossaries alongside plain English.
 - **Multi-Model Jury Voting**: Add an optional second independent judge (e.g. Claude or GPT) to vote on disputed semantic checks.
-- **Automated Human-in-the-Loop Web Interface**: Expand the memory dashboard to allow one-click human approval or editing of synthesized rules.
+- **Automated Human-in-the-Loop Web Interface**: Rules can be approved or rejected from the CLI today; add one-click approval or editing to the memory dashboard.
 
