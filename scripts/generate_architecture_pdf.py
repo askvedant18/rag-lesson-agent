@@ -49,7 +49,7 @@ class NumberedCanvas(canvas.Canvas):
         # Footer
         text = f"Page {self._pageNumber} of {page_count}"
         self.drawRightString(8.5 * inch - 54, 36, text)
-        self.drawString(54, 36, "Confidential - GenAI Engineer: Content Systems Technical Assessment")
+        self.drawString(54, 36, "rag-lesson-agent | System Architecture & Engineering Documentation")
         self.setStrokeColor(colors.HexColor("#CBD5E1"))
         self.setLineWidth(0.5)
         self.line(54, 48, 8.5 * inch - 54, 48)
@@ -214,74 +214,57 @@ def build_pdf(filename="rag_lesson_agent_architecture_guide.pdf"):
         body_style
     ))
 
-    # ASCII Architecture Box
-    arch_ascii = (
-        "+---------------------------------------------------------------------------------------+\n"
-        "|  INPUT LAYER: User Topic ('Introduction to RAG') or Injected Bad Lesson (Adversarial) |\n"
-        "+-------------------------------------------+-------------------------------------------+\n"
-        "                                            |\n"
-        "                                            v\n"
-        "+---------------------------------------------------------------------------------------+\n"
-        "|  1. PLANNER AGENT (agents/planner.py)                                                  |\n"
-        "|  - Ingests Grounding Facts (knowledge/rag_facts.md)                                   |\n"
-        "|  - Profiles Learner: 12th-pass Indian student, zero AI background, simple English     |\n"
-        "|  - Locks Single Analogical Anchor: 'The Open-Book Exam' (output/lesson_spec.json)     |\n"
-        "+-------------------------------------------+-------------------------------------------+\n"
-        "                                            |\n"
-        "                     +----------------------+----------------------+\n"
-        "                     |                                             |\n"
-        "                     v (Attempt 1 .. 3)                            | (Refined Retry)\n"
-        "+-------------------------------------------------------+          |\n"
-        "|  2. GENERATOR AGENT (agents/generator.py)             |          |\n"
-        "|  - Model: gemini-3.5-flash (Temp = 0.7)               |          |\n"
-        "|  - Constrained simple English (Avg <= 15 words)       |          |\n"
-        "|  - Indian relatable analogies & plain English glossary|          |\n"
-        "+---------------------------+---------------------------+          |\n"
-        "                            |                                      |\n"
-        "                            v                                      |\n"
-        "+-------------------------------------------------------+          |\n"
-        "|  3. DUAL-LAYER EVALUATOR (agents/evaluator.py)        |          |\n"
-        "|  [LAYER 1: 5 Deterministic Code Checks (checks/)]     |          |\n"
-        "|   B1, B2 (Sentence words), B3a (Jargon), D1, E2a      |          |\n"
-        "|  [LAYER 2: 11 LLM Judge Checks (prompts/judge_v1)]    |          |\n"
-        "|   Model: gemini-3.1-flash-lite (Temp = 0.0)           |          |\n"
-        "|   Zero tolerance; exact verbatim quote required       |          |\n"
-        "+---------------------------+---------------------------+          |\n"
-        "                            |                                      |\n"
-        "                            v                                      |\n"
-        "                 /---------------------\\                           |\n"
-        "  Fail (< 3)    /   All 16 Checkpoints  \\                          |\n"
-        " +-------------<         Passed?         >                         |\n"
-        " |              \\                       /                          |\n"
-        " |               \\---------------------/                           |\n"
-        " |                          | Pass (16/16)                         |\n"
-        " |                          v                                      |\n"
-        " |             +---------------------------+                       |\n"
-        " |             | STATUS: SHIPPED           |                       |\n"
-        " |             | File: output/final_lesson |                       |\n"
-        " |             +-------------+-------------+                       |\n"
-        " |                           |                                     |\n"
-        " | (Diagnostic Feedback)     |                                     |\n"
-        " +---------------------------+                                     |\n"
-        " |  Exact Check IDs, Failure Reasons, Quotes                       |\n"
-        " +-----------------------------------------------------------------+\n"
-        " | Fail (= 3 Retries Exhausted) -> STATUS: NEEDS_HUMAN_REVIEW      |\n"
-        " +-----------------------------------------------------------------+\n"
-        "                             |\n"
-        "                             v\n"
-        "+---------------------------------------------------------------------------------------+\n"
-        "|  4. REFLECTOR & MEMORY SYSTEM (agents/reflector.py)                                    |\n"
-        "|  - Aggregates failure logs into memory/failure_stats.json                             |\n"
-        "|  - Synthesizes candidate rules (quarantined in memory/learned_rules.json)             |\n"
-        "|  - Rubric changes quarantined in memory/proposed_rubric_changes.json (HITL Boundary)  |\n"
-        "+---------------------------------------------------------------------------------------+"
-    )
-    
-    t_box = Table([[Paragraph(f"<pre>{arch_ascii}</pre>", code_block_style)]], colWidths=[504])
+    # Visual Pipeline Architecture Table
+    arch_flow_data = [
+        [
+            Paragraph("<b>Lifecycle Phase</b>", th_style),
+            Paragraph("<b>Agent & Operational Logic</b>", th_style),
+            Paragraph("<b>I/O & Boundary Contracts</b>", th_style)
+        ],
+        [
+            Paragraph("<font color='#2563EB'><b>Phase 1: Planning</b></font><br/><font size='7' color='#64748B'>agents/planner.py</font>", td_style),
+            Paragraph("Analyzes topic, ingests grounding facts, profiles Indian 12th-pass learner, and selects single pedagogical analogy (The Open-Book Exam).", td_style),
+            Paragraph("<b>Input:</b> <code>knowledge/rag_facts.md</code><br/><b>Output:</b> <code>output/lesson_spec.json</code>", td_style)
+        ],
+        [
+            Paragraph("<font color='#2563EB'><b>Phase 2: Drafting</b></font><br/><font size='7' color='#64748B'>agents/generator.py</font>", td_style),
+            Paragraph("Drafts lesson in simple English with short sentences (avg &le; 15 words, max 25 words). Explains jargon inline at first use. Integrates plain English glossary.", td_style),
+            Paragraph("<b>Model:</b> <code>gemini-3.5-flash</code> (T=0.7)<br/><b>Output:</b> <code>output/attempts/attempt_N.md</code>", td_style)
+        ],
+        [
+            Paragraph("<font color='#2563EB'><b>Phase 3: Dual Audit</b></font><br/><font size='7' color='#64748B'>agents/evaluator.py</font>", td_style),
+            Paragraph("Executes 16 hard PASS/FAIL checks across 2 layers:<br/>• <b>Layer 1 (Code):</b> Words (B1,B2), Jargon (B3a), Headings (D1), Quiz (E2a)<br/>• <b>Layer 2 (LLM):</b> 11 semantic checks (A1..E2b) with verbatim evidence validation.", td_style),
+            Paragraph("<b>Model:</b> <code>gemini-3.1-flash-lite</code> (T=0)<br/><b>Rubric:</b> <code>rubric/rubric.yaml</code><br/><b>Result:</b> 16/16 Binary Array", td_style)
+        ],
+        [
+            Paragraph("<font color='#059669'><b>Phase 4a: Shipped</b></font><br/><font size='7' color='#64748B'>main.py (Router)</font>", td_style),
+            Paragraph("Triggered when all 16 checks PASS. Marks run as SHIPPED, logs summary metrics, and notifies the client.", td_style),
+            Paragraph("<b>Destination:</b><br/><code>output/final_lesson.md</code><br/><code>output/run_summary.json</code>", td_style)
+        ],
+        [
+            Paragraph("<font color='#DC2626'><b>Phase 4b: Retry Loop</b></font><br/><font size='7' color='#64748B'>Bounded Retries (&lt; 3)</font>", td_style),
+            Paragraph("Packages failed check IDs, exact failure reasons, verbatim quotes, and actionable fix suggestions directly back to Generator.", td_style),
+            Paragraph("<b>Feedback:</b> Surgical revision payload.<br/><b>Log:</b> <code>logs/rejection_log.jsonl</code>", td_style)
+        ],
+        [
+            Paragraph("<font color='#DC2626'><b>Phase 4c: Quarantine</b></font><br/><font size='7' color='#64748B'>Exhausted Retries (= 3)</font>", td_style),
+            Paragraph("Halts pipeline without shipping flawed content. Persists diagnostic failure report for human inspection.", td_style),
+            Paragraph("<b>Quarantine:</b><br/><code>output/NEEDS_HUMAN_REVIEW.md</code>", td_style)
+        ],
+        [
+            Paragraph("<font color='#2563EB'><b>Phase 5: Reflection</b></font><br/><font size='7' color='#64748B'>agents/reflector.py</font>", td_style),
+            Paragraph("Aggregates failure metrics across runs. Synthesizes operational generator rules after &ge; 2 failures. Quarantines rubric modifications for human authorization.", td_style),
+            Paragraph("<b>Memory:</b> <code>failure_stats.json</code><br/><b>Rules:</b> <code>learned_rules.json</code><br/><b>Rubric:</b> <code>proposed_rubric_changes.json</code>", td_style)
+        ]
+    ]
+
+    t_box = Table(arch_flow_data, colWidths=[120, 240, 144])
     t_box.setStyle(TableStyle([
-        ('BACKGROUND', (0,0), (-1,-1), colors.HexColor("#0F172A")),
-        ('PADDING', (0,0), (-1,-1), 8),
-        ('BOX', (0,0), (-1,-1), 1, c_secondary),
+        ('BACKGROUND', (0,0), (-1,0), c_secondary),
+        ('GRID', (0,0), (-1,-1), 0.5, c_border),
+        ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, c_light_bg]),
+        ('PADDING', (0,0), (-1,-1), 5),
+        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
     ]))
     story.append(t_box)
     story.append(Spacer(1, 10))
@@ -460,8 +443,22 @@ def build_pdf(filename="rag_lesson_agent_architecture_guide.pdf"):
         ParagraphStyle('FooterNotice', parent=styles['Normal'], fontName='Helvetica', fontSize=7.5, textColor=c_muted, alignment=1)
     ))
 
-    doc.build(story, canvasmaker=NumberedCanvas)
-    print(f"Successfully generated architecture PDF: {filename}")
+    try:
+        doc.build(story, canvasmaker=NumberedCanvas)
+        print(f"Successfully generated architecture PDF: {filename}")
+    except PermissionError:
+        fallback_pdf = "rag_lesson_agent_architecture.pdf"
+        print(f"Notice: '{filename}' is currently locked/opened in a viewer. Writing to '{fallback_pdf}' instead...")
+        doc = SimpleDocTemplate(
+            fallback_pdf,
+            pagesize=letter,
+            leftMargin=54,
+            rightMargin=54,
+            topMargin=54,
+            bottomMargin=54
+        )
+        doc.build(story, canvasmaker=NumberedCanvas)
+        print(f"Successfully generated architecture PDF: {fallback_pdf}")
 
 
 if __name__ == "__main__":
@@ -469,3 +466,4 @@ if __name__ == "__main__":
     if len(sys.argv) > 1:
         out_pdf = sys.argv[1]
     build_pdf(out_pdf)
+
