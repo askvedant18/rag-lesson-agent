@@ -1,6 +1,6 @@
 """
-Generates a publication-grade, professional PDF documentation for rag-lesson-agent:
-- Full System Architecture
+Generates publication-grade, professional PDF documentation for rag-lesson-agent:
+- Full System Architecture & Lifecycle Pipeline Table
 - Detailed Component Breakdown (Agents, Rubric, State Machine, Security)
 - Strategic Future Improvements Roadmap
 """
@@ -41,7 +41,7 @@ class NumberedCanvas(canvas.Canvas):
         
         # Don't draw running header on cover/page 1
         if self._pageNumber > 1:
-            self.drawString(54, 11 * inch - 36, "rag-lesson-agent | System Architecture & Comprehensive Engineering Report")
+            self.drawString(54, 11 * inch - 36, "rag-lesson-agent | System Architecture & Engineering Documentation")
             self.setStrokeColor(colors.HexColor("#CBD5E1"))
             self.setLineWidth(0.5)
             self.line(54, 11 * inch - 42, 8.5 * inch - 54, 11 * inch - 42)
@@ -56,16 +56,8 @@ class NumberedCanvas(canvas.Canvas):
         self.restoreState()
 
 
-def build_pdf(filename="rag_lesson_agent_architecture_guide.pdf"):
-    doc = SimpleDocTemplate(
-        filename,
-        pagesize=letter,
-        leftMargin=54,
-        rightMargin=54,
-        topMargin=54,
-        bottomMargin=54
-    )
-
+def get_story():
+    """Builds and returns a fresh story list of flowables every time."""
     styles = getSampleStyleSheet()
     
     # Custom Palette
@@ -75,7 +67,7 @@ def build_pdf(filename="rag_lesson_agent_architecture_guide.pdf"):
     c_dark = colors.HexColor("#1E293B")       # Slate 800
     c_muted = colors.HexColor("#64748B")      # Slate 500
     c_light_bg = colors.HexColor("#F8FAFC")   # Slate 50
-    c_border = colors.HexColor("#E2E8F0")     # Slate 200
+    c_border = colors.HexColor("#CBD5E1")     # Slate 300
     c_pass = colors.HexColor("#059669")       # Emerald 600
     c_fail = colors.HexColor("#DC2626")       # Red 600
 
@@ -102,8 +94,8 @@ def build_pdf(filename="rag_lesson_agent_architecture_guide.pdf"):
         'Heading1_Custom',
         parent=styles['Normal'],
         fontName='Helvetica-Bold',
-        fontSize=15,
-        leading=19,
+        fontSize=14,
+        leading=18,
         textColor=c_secondary,
         spaceBefore=14,
         spaceAfter=8,
@@ -113,8 +105,8 @@ def build_pdf(filename="rag_lesson_agent_architecture_guide.pdf"):
         'Heading2_Custom',
         parent=styles['Normal'],
         fontName='Helvetica-Bold',
-        fontSize=11,
-        leading=15,
+        fontSize=10.5,
+        leading=14,
         textColor=c_dark,
         spaceBefore=10,
         spaceAfter=4,
@@ -124,37 +116,10 @@ def build_pdf(filename="rag_lesson_agent_architecture_guide.pdf"):
         'Body_Custom',
         parent=styles['Normal'],
         fontName='Helvetica',
-        fontSize=9,
-        leading=13,
+        fontSize=8.5,
+        leading=12.5,
         textColor=c_dark,
         spaceAfter=6
-    )
-    bullet_style = ParagraphStyle(
-        'Bullet_Custom',
-        parent=styles['Normal'],
-        fontName='Helvetica',
-        fontSize=8.5,
-        leading=12,
-        textColor=c_dark,
-        leftIndent=12,
-        spaceAfter=3
-    )
-    code_block_style = ParagraphStyle(
-        'Code_Custom',
-        parent=styles['Normal'],
-        fontName='Courier',
-        fontSize=7.5,
-        leading=10,
-        textColor=colors.HexColor("#0F172A"),
-        spaceAfter=6
-    )
-    callout_style = ParagraphStyle(
-        'Callout_Text',
-        parent=styles['Normal'],
-        fontName='Helvetica-Oblique',
-        fontSize=8.5,
-        leading=12,
-        textColor=colors.HexColor("#1E293B")
     )
     th_style = ParagraphStyle(
         'TableHeader',
@@ -168,8 +133,8 @@ def build_pdf(filename="rag_lesson_agent_architecture_guide.pdf"):
         'TableCell',
         parent=styles['Normal'],
         fontName='Helvetica',
-        fontSize=8,
-        leading=11,
+        fontSize=7.5,
+        leading=10.5,
         textColor=c_dark
     )
 
@@ -192,7 +157,7 @@ def build_pdf(filename="rag_lesson_agent_architecture_guide.pdf"):
             Paragraph("<b>Audit Checkpoints:</b> 16 Binary Checks (5 Deterministic Code + 11 LLM)", body_style)
         ]
     ]
-    meta_table = Table(meta_table_data, colWidths=[270, 234])
+    meta_table = Table(meta_table_data, colWidths=[260, 244])
     meta_table.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (-1,-1), c_light_bg),
         ('BOX', (0,0), (-1,-1), 1, c_border),
@@ -200,12 +165,12 @@ def build_pdf(filename="rag_lesson_agent_architecture_guide.pdf"):
         ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
     ]))
     story.append(meta_table)
-    story.append(Spacer(1, 14))
+    story.append(Spacer(1, 12))
 
     # ---------------------------------------------------------
     # SECTION 1: ARCHITECTURAL BLUEPRINT
     # ---------------------------------------------------------
-    story.append(Paragraph("1. System Architecture & Lifecycle Blueprint", h1_style))
+    story.append(Paragraph("1. System Architecture & Lifecycle Pipeline", h1_style))
     story.append(Paragraph(
         "The system executes an explicit, bounded <b>Finite State Machine (FSM)</b> designed to autonomously draft, "
         "audit, and regenerate educational materials for 12th-grade graduates from India with non-English backgrounds. "
@@ -222,48 +187,48 @@ def build_pdf(filename="rag_lesson_agent_architecture_guide.pdf"):
             Paragraph("<b>I/O & Boundary Contracts</b>", th_style)
         ],
         [
-            Paragraph("<font color='#2563EB'><b>Phase 1: Planning</b></font><br/><font size='7' color='#64748B'>agents/planner.py</font>", td_style),
+            Paragraph("<font color='#2563EB'><b>Phase 1: Planning</b></font><br/><font size='6.5' color='#64748B'>agents/planner.py</font>", td_style),
             Paragraph("Analyzes topic, ingests grounding facts, profiles Indian 12th-pass learner, and selects single pedagogical analogy (The Open-Book Exam).", td_style),
             Paragraph("<b>Input:</b> <code>knowledge/rag_facts.md</code><br/><b>Output:</b> <code>output/lesson_spec.json</code>", td_style)
         ],
         [
-            Paragraph("<font color='#2563EB'><b>Phase 2: Drafting</b></font><br/><font size='7' color='#64748B'>agents/generator.py</font>", td_style),
+            Paragraph("<font color='#2563EB'><b>Phase 2: Drafting</b></font><br/><font size='6.5' color='#64748B'>agents/generator.py</font>", td_style),
             Paragraph("Drafts lesson in simple English with short sentences (avg &le; 15 words, max 25 words). Explains jargon inline at first use. Integrates plain English glossary.", td_style),
             Paragraph("<b>Model:</b> <code>gemini-3.5-flash</code> (T=0.7)<br/><b>Output:</b> <code>output/attempts/attempt_N.md</code>", td_style)
         ],
         [
-            Paragraph("<font color='#2563EB'><b>Phase 3: Dual Audit</b></font><br/><font size='7' color='#64748B'>agents/evaluator.py</font>", td_style),
+            Paragraph("<font color='#2563EB'><b>Phase 3: Dual Audit</b></font><br/><font size='6.5' color='#64748B'>agents/evaluator.py</font>", td_style),
             Paragraph("Executes 16 hard PASS/FAIL checks across 2 layers:<br/>• <b>Layer 1 (Code):</b> Words (B1,B2), Jargon (B3a), Headings (D1), Quiz (E2a)<br/>• <b>Layer 2 (LLM):</b> 11 semantic checks (A1..E2b) with verbatim evidence validation.", td_style),
             Paragraph("<b>Model:</b> <code>gemini-3.1-flash-lite</code> (T=0)<br/><b>Rubric:</b> <code>rubric/rubric.yaml</code><br/><b>Result:</b> 16/16 Binary Array", td_style)
         ],
         [
-            Paragraph("<font color='#059669'><b>Phase 4a: Shipped</b></font><br/><font size='7' color='#64748B'>main.py (Router)</font>", td_style),
+            Paragraph("<font color='#059669'><b>Phase 4a: Shipped</b></font><br/><font size='6.5' color='#64748B'>main.py (Router)</font>", td_style),
             Paragraph("Triggered when all 16 checks PASS. Marks run as SHIPPED, logs summary metrics, and notifies the client.", td_style),
             Paragraph("<b>Destination:</b><br/><code>output/final_lesson.md</code><br/><code>output/run_summary.json</code>", td_style)
         ],
         [
-            Paragraph("<font color='#DC2626'><b>Phase 4b: Retry Loop</b></font><br/><font size='7' color='#64748B'>Bounded Retries (&lt; 3)</font>", td_style),
+            Paragraph("<font color='#DC2626'><b>Phase 4b: Retry Loop</b></font><br/><font size='6.5' color='#64748B'>Bounded Retries (&lt; 3)</font>", td_style),
             Paragraph("Packages failed check IDs, exact failure reasons, verbatim quotes, and actionable fix suggestions directly back to Generator.", td_style),
             Paragraph("<b>Feedback:</b> Surgical revision payload.<br/><b>Log:</b> <code>logs/rejection_log.jsonl</code>", td_style)
         ],
         [
-            Paragraph("<font color='#DC2626'><b>Phase 4c: Quarantine</b></font><br/><font size='7' color='#64748B'>Exhausted Retries (= 3)</font>", td_style),
+            Paragraph("<font color='#DC2626'><b>Phase 4c: Quarantine</b></font><br/><font size='6.5' color='#64748B'>Exhausted Retries (= 3)</font>", td_style),
             Paragraph("Halts pipeline without shipping flawed content. Persists diagnostic failure report for human inspection.", td_style),
             Paragraph("<b>Quarantine:</b><br/><code>output/NEEDS_HUMAN_REVIEW.md</code>", td_style)
         ],
         [
-            Paragraph("<font color='#2563EB'><b>Phase 5: Reflection</b></font><br/><font size='7' color='#64748B'>agents/reflector.py</font>", td_style),
+            Paragraph("<font color='#2563EB'><b>Phase 5: Reflection</b></font><br/><font size='6.5' color='#64748B'>agents/reflector.py</font>", td_style),
             Paragraph("Aggregates failure metrics across runs. Synthesizes operational generator rules after &ge; 2 failures. Quarantines rubric modifications for human authorization.", td_style),
             Paragraph("<b>Memory:</b> <code>failure_stats.json</code><br/><b>Rules:</b> <code>learned_rules.json</code><br/><b>Rubric:</b> <code>proposed_rubric_changes.json</code>", td_style)
         ]
     ]
 
-    t_box = Table(arch_flow_data, colWidths=[120, 240, 144])
+    t_box = Table(arch_flow_data, colWidths=[115, 245, 144])
     t_box.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (-1,0), c_secondary),
         ('GRID', (0,0), (-1,-1), 0.5, c_border),
         ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, c_light_bg]),
-        ('PADDING', (0,0), (-1,-1), 5),
+        ('PADDING', (0,0), (-1,-1), 4),
         ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
     ]))
     story.append(t_box)
@@ -304,7 +269,7 @@ def build_pdf(filename="rag_lesson_agent_architecture_guide.pdf"):
     checks_data = [
         [Paragraph("<b>Check ID</b>", th_style), Paragraph("<b>Type</b>", th_style), Paragraph("<b>Target Quality Criteria</b>", th_style), Paragraph("<b>Enforcement Layer</b>", th_style)],
         [Paragraph("<b>A1</b>", td_style), Paragraph("LLM", td_style), Paragraph("Correct RAG definition as retrieval + prompt augmentation + LLM generation", td_style), Paragraph("gemini-3.1-flash-lite (T=0)", td_style)],
-        [Paragraph("<b>A2</b>", td_style), Paragraph("LLM", td_style), Paragraph("Grounding Integrity: Zero fact contradictions (e.g. weights never change, no 100% hallucination elimination claims)", td_style), Paragraph("Grounding Fact Sheet Auditor", td_style)],
+        [Paragraph("<b>A2</b>", td_style), Paragraph("LLM", td_style), Paragraph("Grounding Integrity: Zero fact contradictions (weights never change, no 100% hallucination claims)", td_style), Paragraph("Grounding Fact Sheet Auditor", td_style)],
         [Paragraph("<b>A3</b>", td_style), Paragraph("LLM", td_style), Paragraph("Mandatory Limitations: Retrieval misses, latency overhead, bad notes risk", td_style), Paragraph("Zero-Temp LLM Judge", td_style)],
         [Paragraph("<b>B1</b>", td_style), Paragraph("CODE", td_style), Paragraph("Average sentence length &le; 15 words across full markdown text", td_style), Paragraph("Python regex sentence tokenizer", td_style)],
         [Paragraph("<b>B2</b>", td_style), Paragraph("CODE", td_style), Paragraph("Hard maximum sentence ceiling &le; 25 words (zero runaway sentences)", td_style), Paragraph("Python sentence length validator", td_style)],
@@ -320,16 +285,16 @@ def build_pdf(filename="rag_lesson_agent_architecture_guide.pdf"):
         [Paragraph("<b>E2a</b>", td_style), Paragraph("CODE", td_style), Paragraph("Recap section present and exactly 3 numbered quiz questions (Q1, Q2, Q3)", td_style), Paragraph("Regex Quiz Parser (<details> excluded)", td_style)],
         [Paragraph("<b>E2b</b>", td_style), Paragraph("LLM", td_style), Paragraph("All 3 quiz questions unambiguously answerable from the lesson text alone", td_style), Paragraph("Quiz Grounding Judge", td_style)],
     ]
-    t_checks = Table(checks_data, colWidths=[40, 36, 310, 118])
+    t_checks = Table(checks_data, colWidths=[38, 36, 316, 114])
     t_checks.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (-1,0), c_secondary),
         ('GRID', (0,0), (-1,-1), 0.5, c_border),
         ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, c_light_bg]),
-        ('PADDING', (0,0), (-1,-1), 4),
+        ('PADDING', (0,0), (-1,-1), 3.5),
         ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
     ]))
     story.append(t_checks)
-    story.append(Spacer(1, 12))
+    story.append(Spacer(1, 10))
 
     story.append(Paragraph("D. Memory, Self-Reflection & Human Guardrails", h2_style))
     story.append(Paragraph(
@@ -368,11 +333,11 @@ def build_pdf(filename="rag_lesson_agent_architecture_guide.pdf"):
         ('BACKGROUND', (0,0), (-1,0), c_secondary),
         ('GRID', (0,0), (-1,-1), 0.5, c_border),
         ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, c_light_bg]),
-        ('PADDING', (0,0), (-1,-1), 5),
+        ('PADDING', (0,0), (-1,-1), 4.5),
         ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
     ]))
     story.append(t_sec)
-    story.append(Spacer(1, 14))
+    story.append(Spacer(1, 12))
 
     # ---------------------------------------------------------
     # SECTION 4: STRATEGIC IMPROVEMENTS ROADMAP (WHAT NEXT?)
@@ -443,27 +408,30 @@ def build_pdf(filename="rag_lesson_agent_architecture_guide.pdf"):
         ParagraphStyle('FooterNotice', parent=styles['Normal'], fontName='Helvetica', fontSize=7.5, textColor=c_muted, alignment=1)
     ))
 
-    try:
-        doc.build(story, canvasmaker=NumberedCanvas)
-        print(f"Successfully generated architecture PDF: {filename}")
-    except PermissionError:
-        fallback_pdf = "rag_lesson_agent_architecture.pdf"
-        print(f"Notice: '{filename}' is currently locked/opened in a viewer. Writing to '{fallback_pdf}' instead...")
-        doc = SimpleDocTemplate(
-            fallback_pdf,
-            pagesize=letter,
-            leftMargin=54,
-            rightMargin=54,
-            topMargin=54,
-            bottomMargin=54
-        )
-        doc.build(story, canvasmaker=NumberedCanvas)
-        print(f"Successfully generated architecture PDF: {fallback_pdf}")
+    return story
+
+
+def build_single_pdf(filename):
+    """Safely builds a PDF to the specified filename."""
+    doc = SimpleDocTemplate(
+        filename,
+        pagesize=letter,
+        leftMargin=54,
+        rightMargin=54,
+        topMargin=54,
+        bottomMargin=54
+    )
+    fresh_story = get_story()
+    doc.build(fresh_story, canvasmaker=NumberedCanvas)
+    print(f"Successfully generated PDF: {filename} ({os.path.getsize(filename)} bytes)")
 
 
 if __name__ == "__main__":
-    out_pdf = "rag_lesson_agent_architecture_guide.pdf"
-    if len(sys.argv) > 1:
-        out_pdf = sys.argv[1]
-    build_pdf(out_pdf)
-
+    # Generate rag_lesson_agent_architecture.pdf
+    build_single_pdf("rag_lesson_agent_architecture.pdf")
+    
+    # Also attempt rag_lesson_agent_architecture_guide.pdf if not locked
+    try:
+        build_single_pdf("rag_lesson_agent_architecture_guide.pdf")
+    except PermissionError:
+        print("Notice: 'rag_lesson_agent_architecture_guide.pdf' is locked in another application. Skipped.")
